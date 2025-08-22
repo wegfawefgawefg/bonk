@@ -1,5 +1,5 @@
-use nobonk::*;
 use glam::Vec2;
+use nobonk::*;
 use std::time::Instant;
 
 fn lcg(seed: &mut u32) -> u32 {
@@ -28,7 +28,13 @@ fn main() {
         let vx = (lcg(&mut seed) as f32 / u32::MAX as f32) * 4.0 - 2.0;
         let vy = (lcg(&mut seed) as f32 / u32::MAX as f32) * 4.0 - 2.0;
         if i % 2 == 0 {
-            world.push_aabb(Vec2::new(rx, ry), Vec2::splat(0.5), Vec2::new(vx, vy), mask, None);
+            world.push_aabb(
+                Vec2::new(rx, ry),
+                Vec2::splat(0.5),
+                Vec2::new(vx, vy),
+                mask,
+                None,
+            );
         } else {
             world.push_circle(Vec2::new(rx, ry), 0.5, Vec2::new(vx, vy), mask, None);
         }
@@ -43,10 +49,19 @@ fn main() {
     if let Some(t) = world.timing() {
         println!(
             "N={} cell_size={} tighten={} end={:.3}ms gen={:.3}ms (scan={:.3}ms narrow={:.3}ms) events={}",
-            n, world.cfg.cell_size, world.cfg.tighten_swept_aabb, t.end_frame_ms, t.generate_ms, t.generate_scan_ms, t.generate_narrowphase_ms, n_events
+            n,
+            world.cfg.cell_size,
+            world.cfg.tighten_swept_aabb,
+            t.end_frame_ms,
+            t.generate_ms,
+            t.generate_scan_ms,
+            t.generate_narrowphase_ms,
+            n_events
         );
     } else {
-        println!("N={} cell_size={} tighten={} end_frame={:?} generate={:?} events={}",
-            n, world.cfg.cell_size, world.cfg.tighten_swept_aabb, t_end, t_gen, n_events);
+        println!(
+            "N={} cell_size={} tighten={} end_frame={:?} generate={:?} events={}",
+            n, world.cfg.cell_size, world.cfg.tighten_swept_aabb, t_end, t_gen, n_events
+        );
     }
 }

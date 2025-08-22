@@ -17,7 +17,11 @@ pub struct LayerMask {
 impl LayerMask {
     /// Convenience constructor.
     pub fn simple(layer: u32, collides_with: u32) -> Self {
-        Self { layer, collides_with, exclude: 0 }
+        Self {
+            layer,
+            collides_with,
+            exclude: 0,
+        }
     }
 
     /// Pair filtering rule (spec):
@@ -82,7 +86,10 @@ pub struct SweepHit {
 
 /// Event discriminator.
 #[derive(Copy, Clone, Debug)]
-pub enum EventKind { Overlap, Sweep }
+pub enum EventKind {
+    Overlap,
+    Sweep,
+}
 
 /// Frame-local handle for colliders inserted this frame.
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]

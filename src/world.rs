@@ -77,7 +77,12 @@ impl PhysicsWorldApi for PhysicsWorld {
         mask: LayerMask,
         user_key: Option<ColKey>,
     ) -> FrameId {
-        let desc = ColliderDesc { kind: ColliderKind::Circle { radius }, center, mask, user_key };
+        let desc = ColliderDesc {
+            kind: ColliderKind::Circle { radius },
+            center,
+            mask,
+            user_key,
+        };
         let motion = Motion { vel };
         self.push(desc, motion)
     }
@@ -90,7 +95,12 @@ impl PhysicsWorldApi for PhysicsWorld {
         mask: LayerMask,
         user_key: Option<ColKey>,
     ) -> FrameId {
-        let desc = ColliderDesc { kind: ColliderKind::Aabb { half_extents }, center, mask, user_key };
+        let desc = ColliderDesc {
+            kind: ColliderKind::Aabb { half_extents },
+            center,
+            mask,
+            user_key,
+        };
         let motion = Motion { vel };
         self.push(desc, motion)
     }
@@ -102,28 +112,50 @@ impl PhysicsWorldApi for PhysicsWorld {
         mask: LayerMask,
         user_key: Option<ColKey>,
     ) -> FrameId {
-        let desc = ColliderDesc { kind: ColliderKind::Point, center: p, mask, user_key };
+        let desc = ColliderDesc {
+            kind: ColliderKind::Point,
+            center: p,
+            mask,
+            user_key,
+        };
         let motion = Motion { vel };
         self.push(desc, motion)
     }
 
     fn end_frame(&mut self) {
         // Build axis-aligned bounds for each entry and insert into uniform grid.
-        let t_all = if self.cfg.enable_timing { Some(Instant::now()) } else { None };
-        let t0 = if self.cfg.enable_timing { Some(Instant::now()) } else { None };
-        self.aabbs.resize(self.entries.len(), (Vec2::ZERO, Vec2::ZERO));
+        let t_all = if self.cfg.enable_timing {
+            Some(Instant::now())
+        } else {
+            None
+        };
+        let t0 = if self.cfg.enable_timing {
+            Some(Instant::now())
+        } else {
+            None
+        };
+        self.aabbs
+            .resize(self.entries.len(), (Vec2::ZERO, Vec2::ZERO));
 
         for (i, e) in self.entries.iter().enumerate() {
             let (min, max) = self.compute_entry_aabb(e);
             self.aabbs[i] = (min, max);
         }
-        let aabb_ms = t0.map(|t| t.elapsed().as_secs_f64() * 1000.0).unwrap_or(0.0);
-        let t1 = if self.cfg.enable_timing { Some(Instant::now()) } else { None };
+        let aabb_ms = t0
+            .map(|t| t.elapsed().as_secs_f64() * 1000.0)
+            .unwrap_or(0.0);
+        let t1 = if self.cfg.enable_timing {
+            Some(Instant::now())
+        } else {
+            None
+        };
         let aabbs_snapshot = self.aabbs.clone();
         for (i, (min, max)) in aabbs_snapshot.into_iter().enumerate() {
             self.insert_into_grid(i, min, max);
         }
-        let grid_ms = t1.map(|t| t.elapsed().as_secs_f64() * 1000.0).unwrap_or(0.0);
+        let grid_ms = t1
+            .map(|t| t.elapsed().as_secs_f64() * 1000.0)
+            .unwrap_or(0.0);
         if let Some(t_all) = t_all {
             self.last_timing = Some(WorldTiming {
                 end_frame_ms: t_all.elapsed().as_secs_f64() * 1000.0,
@@ -136,11 +168,21 @@ impl PhysicsWorldApi for PhysicsWorld {
 
     fn generate_events(&mut self) {
         // Build candidate pairs from grid, deduplicate, then dispatch narrowphase
-        let t_all = if self.cfg.enable_timing { Some(Instant::now()) } else { None };
-        let t_scan0 = if self.cfg.enable_timing { Some(Instant::now()) } else { None };
+        let t_all = if self.cfg.enable_timing {
+            Some(Instant::now())
+        } else {
+            None
+        };
+        let t_scan0 = if self.cfg.enable_timing {
+            Some(Instant::now())
+        } else {
+            None
+        };
         let mut seen_pairs: HashSet<(usize, usize)> = HashSet::new();
         let mut push_event = |ev: Event, buf: &mut Vec<Event>, max: usize| {
-            if buf.len() < max { buf.push(ev); }
+            if buf.len() < max {
+                buf.push(ev);
+            }
         };
 
         for indices in self.grid.values() {
@@ -149,10 +191,18 @@ impl PhysicsWorldApi for PhysicsWorld {
                     let a = indices[i0];
                     let b = indices[i1];
                     let key = if a < b { (a, b) } else { (b, a) };
-                    if !seen_pairs.insert(key) { continue; }
-                    if self.events.len() >= self.cfg.max_events { return; }
+                    if !seen_pairs.insert(key) {
+                        continue;
+                    }
+                    if self.events.len() >= self.cfg.max_events {
+                        return;
+                    }
 
-                    let t_np0 = if self.cfg.enable_timing { Some(Instant::now()) } else { None };
+                    let t_np0 = if self.cfg.enable_timing {
+                        Some(Instant::now())
+                    } else {
+                        None
+                    };
                     let ea = &self.entries[a];
                     let eb = &self.entries[b];
                     // Mask mutual consent
@@ -210,13 +260,18 @@ impl PhysicsWorldApi for PhysicsWorld {
             }
         }
         if let Some(t_scan0) = t_scan0 {
-            if self.last_timing.is_none() { self.last_timing = Some(WorldTiming::default()); }
+            if self.last_timing.is_none() {
+                self.last_timing = Some(WorldTiming::default());
+            }
             if let Some(timing) = self.last_timing.as_mut() {
-                timing.generate_scan_ms = t_scan0.elapsed().as_secs_f64() * 1000.0 - timing.generate_narrowphase_ms;
+                timing.generate_scan_ms =
+                    t_scan0.elapsed().as_secs_f64() * 1000.0 - timing.generate_narrowphase_ms;
             }
         }
         if let Some(t_all) = t_all {
-            if self.last_timing.is_none() { self.last_timing = Some(WorldTiming::default()); }
+            if self.last_timing.is_none() {
+                self.last_timing = Some(WorldTiming::default());
+            }
             if let Some(timing) = self.last_timing.as_mut() {
                 timing.generate_ms = t_all.elapsed().as_secs_f64() * 1000.0;
                 timing.events_emitted = self.events.len();
@@ -237,54 +292,101 @@ impl PhysicsWorldApi for PhysicsWorld {
         mask: LayerMask,
         max_t: f32,
     ) -> Option<(FrameId, SweepHit, Option<ColKey>)> {
-        if dir.length_squared() == 0.0 { return None; }
+        if dir.length_squared() == 0.0 {
+            return None;
+        }
         let cs = self.cfg.cell_size.max(1e-5);
         // Setup DDA
         let mut best: Option<(usize, SweepHit)> = None;
         let mut tested: HashSet<usize> = HashSet::new();
 
         let mut cell = self.world_to_cell(origin, cs);
-        let step_x = if dir.x > 0.0 { 1 } else if dir.x < 0.0 { -1 } else { 0 };
-        let step_y = if dir.y > 0.0 { 1 } else if dir.y < 0.0 { -1 } else { 0 };
+        let step_x = if dir.x > 0.0 {
+            1
+        } else if dir.x < 0.0 {
+            -1
+        } else {
+            0
+        };
+        let step_y = if dir.y > 0.0 {
+            1
+        } else if dir.y < 0.0 {
+            -1
+        } else {
+            0
+        };
         let next_boundary = |c: i32, step: i32| -> f32 {
-            if step > 0 { (c as f32 + 1.0) * cs } else { c as f32 * cs }
+            if step > 0 {
+                (c as f32 + 1.0) * cs
+            } else {
+                c as f32 * cs
+            }
         };
         let cell_origin = Vec2::new(cell.0 as f32 * cs, cell.1 as f32 * cs);
         let mut t_max_x = if step_x != 0 {
             let nb = next_boundary(cell.0, step_x);
             (nb - origin.x) / dir.x
-        } else { f32::INFINITY };
+        } else {
+            f32::INFINITY
+        };
         let mut t_max_y = if step_y != 0 {
             let nb = next_boundary(cell.1, step_y);
             (nb - origin.y) / dir.y
-        } else { f32::INFINITY };
-        let t_delta_x = if step_x != 0 { cs / dir.x.abs() } else { f32::INFINITY };
-        let t_delta_y = if step_y != 0 { cs / dir.y.abs() } else { f32::INFINITY };
+        } else {
+            f32::INFINITY
+        };
+        let t_delta_x = if step_x != 0 {
+            cs / dir.x.abs()
+        } else {
+            f32::INFINITY
+        };
+        let t_delta_y = if step_y != 0 {
+            cs / dir.y.abs()
+        } else {
+            f32::INFINITY
+        };
 
         let mut t_curr = 0.0f32;
         // Visit cells until exceeding max_t
-        for _ in 0..10_000 { // safety cap
-            if t_curr > max_t { break; }
+        for _ in 0..10_000 {
+            // safety cap
+            if t_curr > max_t {
+                break;
+            }
             if let Some(list) = self.grid.get(&cell) {
                 for &idx in list {
-                    if !tested.insert(idx) { continue; }
+                    if !tested.insert(idx) {
+                        continue;
+                    }
                     let e = &self.entries[idx];
                     // Mask mutual consent between ray mask and collider mask
-                    if !(mask.allows(e.desc.mask) && e.desc.mask.allows(mask)) { continue; }
+                    if !(mask.allows(e.desc.mask) && e.desc.mask.allows(mask)) {
+                        continue;
+                    }
                     let hit = match e.desc.kind {
                         ColliderKind::Aabb { .. } => {
                             let (min, max) = self.aabbs[idx];
                             crate::narrowphase::Narrowphase::ray_aabb(origin, dir, min, max)
                         }
                         ColliderKind::Circle { radius } => {
-                            crate::narrowphase::Narrowphase::ray_circle(origin, dir, e.desc.center, radius)
+                            crate::narrowphase::Narrowphase::ray_circle(
+                                origin,
+                                dir,
+                                e.desc.center,
+                                radius,
+                            )
                         }
-                        ColliderKind::Point => {
-                            crate::narrowphase::Narrowphase::ray_circle(origin, dir, e.desc.center, 0.0)
-                        }
+                        ColliderKind::Point => crate::narrowphase::Narrowphase::ray_circle(
+                            origin,
+                            dir,
+                            e.desc.center,
+                            0.0,
+                        ),
                     };
                     if let Some(h) = hit {
-                        if h.toi < 0.0 || h.toi > max_t { continue; }
+                        if h.toi < 0.0 || h.toi > max_t {
+                            continue;
+                        }
                         match &mut best {
                             Some((_, bh)) if h.toi >= bh.toi => {}
                             _ => best = Some((idx, h)),
@@ -315,13 +417,29 @@ impl PhysicsWorldApi for PhysicsWorld {
         if let Some(list) = self.grid.get(&cell) {
             for &idx in list {
                 let e = &self.entries[idx];
-                if !(mask.allows(e.desc.mask) && e.desc.mask.allows(mask)) { continue; }
+                if !(mask.allows(e.desc.mask) && e.desc.mask.allows(mask)) {
+                    continue;
+                }
                 let hit = match e.desc.kind {
-                    ColliderKind::Aabb { .. } => crate::narrowphase::Narrowphase::overlap_point_aabb(p, e.desc.center, self.half_extents_of(idx)),
-                    ColliderKind::Circle { radius } => crate::narrowphase::Narrowphase::overlap_point_circle(p, e.desc.center, radius),
+                    ColliderKind::Aabb { .. } => {
+                        crate::narrowphase::Narrowphase::overlap_point_aabb(
+                            p,
+                            e.desc.center,
+                            self.half_extents_of(idx),
+                        )
+                    }
+                    ColliderKind::Circle { radius } => {
+                        crate::narrowphase::Narrowphase::overlap_point_circle(
+                            p,
+                            e.desc.center,
+                            radius,
+                        )
+                    }
                     ColliderKind::Point => p == e.desc.center,
                 };
-                if hit { out.push((FrameId(idx as u32), e.desc.user_key)); }
+                if hit {
+                    out.push((FrameId(idx as u32), e.desc.user_key));
+                }
             }
         }
         out
@@ -340,21 +458,48 @@ impl PhysicsWorldApi for PhysicsWorld {
         let (ix1, iy1) = self.world_to_cell(max, cs);
         let mut out = Vec::new();
         let mut seen = HashSet::new();
-        for iy in iy0..=iy1 { for ix in ix0..=ix1 {
-            if let Some(list) = self.grid.get(&(ix, iy)) {
-                for &idx in list {
-                    if !seen.insert(idx) { continue; }
-                    let e = &self.entries[idx];
-                    if !(mask.allows(e.desc.mask) && e.desc.mask.allows(mask)) { continue; }
-                    let ov = match e.desc.kind {
-                        ColliderKind::Aabb { .. } => crate::narrowphase::Narrowphase::overlap_aabb_aabb(e.desc.center, self.half_extents_of(idx), center, half_extents).is_some(),
-                        ColliderKind::Circle { radius } => Self::overlap_circle_aabb_bool(e.desc.center, radius, center, half_extents),
-                        ColliderKind::Point => crate::narrowphase::Narrowphase::overlap_point_aabb(e.desc.center, center, half_extents),
-                    };
-                    if ov { out.push((FrameId(idx as u32), e.desc.user_key)); }
+        for iy in iy0..=iy1 {
+            for ix in ix0..=ix1 {
+                if let Some(list) = self.grid.get(&(ix, iy)) {
+                    for &idx in list {
+                        if !seen.insert(idx) {
+                            continue;
+                        }
+                        let e = &self.entries[idx];
+                        if !(mask.allows(e.desc.mask) && e.desc.mask.allows(mask)) {
+                            continue;
+                        }
+                        let ov = match e.desc.kind {
+                            ColliderKind::Aabb { .. } => {
+                                crate::narrowphase::Narrowphase::overlap_aabb_aabb(
+                                    e.desc.center,
+                                    self.half_extents_of(idx),
+                                    center,
+                                    half_extents,
+                                )
+                                .is_some()
+                            }
+                            ColliderKind::Circle { radius } => Self::overlap_circle_aabb_bool(
+                                e.desc.center,
+                                radius,
+                                center,
+                                half_extents,
+                            ),
+                            ColliderKind::Point => {
+                                crate::narrowphase::Narrowphase::overlap_point_aabb(
+                                    e.desc.center,
+                                    center,
+                                    half_extents,
+                                )
+                            }
+                        };
+                        if ov {
+                            out.push((FrameId(idx as u32), e.desc.user_key));
+                        }
+                    }
                 }
             }
-        }}
+        }
         out
     }
 
@@ -371,21 +516,48 @@ impl PhysicsWorldApi for PhysicsWorld {
         let (ix1, iy1) = self.world_to_cell(max, cs);
         let mut out = Vec::new();
         let mut seen = HashSet::new();
-        for iy in iy0..=iy1 { for ix in ix0..=ix1 {
-            if let Some(list) = self.grid.get(&(ix, iy)) {
-                for &idx in list {
-                    if !seen.insert(idx) { continue; }
-                    let e = &self.entries[idx];
-                    if !(mask.allows(e.desc.mask) && e.desc.mask.allows(mask)) { continue; }
-                    let ov = match e.desc.kind {
-                        ColliderKind::Aabb { .. } => Self::overlap_circle_aabb_bool(center, radius, e.desc.center, self.half_extents_of(idx)),
-                        ColliderKind::Circle { radius: r1 } => crate::narrowphase::Narrowphase::overlap_circle_circle(center, radius, e.desc.center, r1).is_some(),
-                        ColliderKind::Point => crate::narrowphase::Narrowphase::overlap_point_circle(e.desc.center, center, radius),
-                    };
-                    if ov { out.push((FrameId(idx as u32), e.desc.user_key)); }
+        for iy in iy0..=iy1 {
+            for ix in ix0..=ix1 {
+                if let Some(list) = self.grid.get(&(ix, iy)) {
+                    for &idx in list {
+                        if !seen.insert(idx) {
+                            continue;
+                        }
+                        let e = &self.entries[idx];
+                        if !(mask.allows(e.desc.mask) && e.desc.mask.allows(mask)) {
+                            continue;
+                        }
+                        let ov = match e.desc.kind {
+                            ColliderKind::Aabb { .. } => Self::overlap_circle_aabb_bool(
+                                center,
+                                radius,
+                                e.desc.center,
+                                self.half_extents_of(idx),
+                            ),
+                            ColliderKind::Circle { radius: r1 } => {
+                                crate::narrowphase::Narrowphase::overlap_circle_circle(
+                                    center,
+                                    radius,
+                                    e.desc.center,
+                                    r1,
+                                )
+                                .is_some()
+                            }
+                            ColliderKind::Point => {
+                                crate::narrowphase::Narrowphase::overlap_point_circle(
+                                    e.desc.center,
+                                    center,
+                                    radius,
+                                )
+                            }
+                        };
+                        if ov {
+                            out.push((FrameId(idx as u32), e.desc.user_key));
+                        }
+                    }
                 }
             }
-        }}
+        }
         out
     }
 
@@ -475,46 +647,111 @@ impl PhysicsWorld {
         let b = &self.entries[bi];
         match (a.desc.kind, b.desc.kind) {
             (ColliderKind::Aabb { .. }, ColliderKind::Aabb { .. }) => {
-                Narrowphase::overlap_aabb_aabb(a.desc.center, self.half_extents_of(ai), b.desc.center, self.half_extents_of(bi))
+                Narrowphase::overlap_aabb_aabb(
+                    a.desc.center,
+                    self.half_extents_of(ai),
+                    b.desc.center,
+                    self.half_extents_of(bi),
+                )
             }
             (ColliderKind::Circle { radius: r0 }, ColliderKind::Circle { radius: r1 }) => {
                 Narrowphase::overlap_circle_circle(a.desc.center, r0, b.desc.center, r1)
             }
             (ColliderKind::Point, ColliderKind::Aabb { .. }) => {
-                if Narrowphase::overlap_point_aabb(a.desc.center, b.desc.center, self.half_extents_of(bi)) {
-                    Some(Overlap { normal: Vec2::ZERO, depth: 0.0, contact: a.desc.center })
-                } else { None }
+                if Narrowphase::overlap_point_aabb(
+                    a.desc.center,
+                    b.desc.center,
+                    self.half_extents_of(bi),
+                ) {
+                    Some(Overlap {
+                        normal: Vec2::ZERO,
+                        depth: 0.0,
+                        contact: a.desc.center,
+                    })
+                } else {
+                    None
+                }
             }
             (ColliderKind::Aabb { .. }, ColliderKind::Point) => {
-                if Narrowphase::overlap_point_aabb(b.desc.center, a.desc.center, self.half_extents_of(ai)) {
-                    Some(Overlap { normal: Vec2::ZERO, depth: 0.0, contact: b.desc.center })
-                } else { None }
+                if Narrowphase::overlap_point_aabb(
+                    b.desc.center,
+                    a.desc.center,
+                    self.half_extents_of(ai),
+                ) {
+                    Some(Overlap {
+                        normal: Vec2::ZERO,
+                        depth: 0.0,
+                        contact: b.desc.center,
+                    })
+                } else {
+                    None
+                }
             }
             (ColliderKind::Point, ColliderKind::Circle { radius: r }) => {
                 if Narrowphase::overlap_point_circle(a.desc.center, b.desc.center, r) {
-                    Some(Overlap { normal: Vec2::ZERO, depth: 0.0, contact: a.desc.center })
-                } else { None }
+                    Some(Overlap {
+                        normal: Vec2::ZERO,
+                        depth: 0.0,
+                        contact: a.desc.center,
+                    })
+                } else {
+                    None
+                }
             }
             (ColliderKind::Circle { radius: r }, ColliderKind::Point) => {
                 if Narrowphase::overlap_point_circle(b.desc.center, a.desc.center, r) {
-                    Some(Overlap { normal: Vec2::ZERO, depth: 0.0, contact: b.desc.center })
-                } else { None }
+                    Some(Overlap {
+                        normal: Vec2::ZERO,
+                        depth: 0.0,
+                        contact: b.desc.center,
+                    })
+                } else {
+                    None
+                }
             }
             (ColliderKind::Circle { radius }, ColliderKind::Aabb { .. }) => {
-                if Self::overlap_circle_aabb_bool(a.desc.center, radius, b.desc.center, self.half_extents_of(bi)) {
+                if Self::overlap_circle_aabb_bool(
+                    a.desc.center,
+                    radius,
+                    b.desc.center,
+                    self.half_extents_of(bi),
+                ) {
                     // Approximate normal/contact
-                    Some(Overlap { normal: Vec2::ZERO, depth: 0.0, contact: a.desc.center })
-                } else { None }
+                    Some(Overlap {
+                        normal: Vec2::ZERO,
+                        depth: 0.0,
+                        contact: a.desc.center,
+                    })
+                } else {
+                    None
+                }
             }
             (ColliderKind::Aabb { .. }, ColliderKind::Circle { radius }) => {
-                if Self::overlap_circle_aabb_bool(b.desc.center, radius, a.desc.center, self.half_extents_of(ai)) {
-                    Some(Overlap { normal: Vec2::ZERO, depth: 0.0, contact: b.desc.center })
-                } else { None }
+                if Self::overlap_circle_aabb_bool(
+                    b.desc.center,
+                    radius,
+                    a.desc.center,
+                    self.half_extents_of(ai),
+                ) {
+                    Some(Overlap {
+                        normal: Vec2::ZERO,
+                        depth: 0.0,
+                        contact: b.desc.center,
+                    })
+                } else {
+                    None
+                }
             }
             (ColliderKind::Point, ColliderKind::Point) => {
                 if a.desc.center == b.desc.center {
-                    Some(Overlap { normal: Vec2::ZERO, depth: 0.0, contact: a.desc.center })
-                } else { None }
+                    Some(Overlap {
+                        normal: Vec2::ZERO,
+                        depth: 0.0,
+                        contact: a.desc.center,
+                    })
+                } else {
+                    None
+                }
             }
         }
     }
@@ -525,41 +762,97 @@ impl PhysicsWorld {
         let a = &self.entries[ai];
         let b = &self.entries[bi];
         match (a.desc.kind, b.desc.kind) {
-            (ColliderKind::Aabb { .. }, ColliderKind::Aabb { .. }) => {
-                Narrowphase::sweep_aabb_aabb(a.desc.center, self.half_extents_of(ai), a.motion.vel * self.cfg.dt,
-                                             b.desc.center, self.half_extents_of(bi), b.motion.vel * self.cfg.dt)
-            }
+            (ColliderKind::Aabb { .. }, ColliderKind::Aabb { .. }) => Narrowphase::sweep_aabb_aabb(
+                a.desc.center,
+                self.half_extents_of(ai),
+                a.motion.vel * self.cfg.dt,
+                b.desc.center,
+                self.half_extents_of(bi),
+                b.motion.vel * self.cfg.dt,
+            ),
             (ColliderKind::Circle { radius: r0 }, ColliderKind::Circle { radius: r1 }) => {
-                Narrowphase::sweep_circle_circle(a.desc.center, r0, a.motion.vel * self.cfg.dt,
-                                                 b.desc.center, r1, b.motion.vel * self.cfg.dt)
+                Narrowphase::sweep_circle_circle(
+                    a.desc.center,
+                    r0,
+                    a.motion.vel * self.cfg.dt,
+                    b.desc.center,
+                    r1,
+                    b.motion.vel * self.cfg.dt,
+                )
             }
             (ColliderKind::Circle { radius: r }, ColliderKind::Aabb { .. }) => {
-                Narrowphase::sweep_circle_aabb(a.desc.center, r, a.motion.vel * self.cfg.dt,
-                                               b.desc.center, self.half_extents_of(bi), b.motion.vel * self.cfg.dt)
+                Narrowphase::sweep_circle_aabb(
+                    a.desc.center,
+                    r,
+                    a.motion.vel * self.cfg.dt,
+                    b.desc.center,
+                    self.half_extents_of(bi),
+                    b.motion.vel * self.cfg.dt,
+                )
             }
             (ColliderKind::Aabb { .. }, ColliderKind::Circle { radius: r }) => {
                 // Swap and invert normal later
-                let hit = Narrowphase::sweep_circle_aabb(b.desc.center, r, b.motion.vel * self.cfg.dt,
-                                                         a.desc.center, self.half_extents_of(ai), a.motion.vel * self.cfg.dt)?;
-                Some(SweepHit { toi: hit.toi, normal: -hit.normal, contact: hit.contact })
+                let hit = Narrowphase::sweep_circle_aabb(
+                    b.desc.center,
+                    r,
+                    b.motion.vel * self.cfg.dt,
+                    a.desc.center,
+                    self.half_extents_of(ai),
+                    a.motion.vel * self.cfg.dt,
+                )?;
+                Some(SweepHit {
+                    toi: hit.toi,
+                    normal: -hit.normal,
+                    contact: hit.contact,
+                })
             }
-            (ColliderKind::Point, ColliderKind::Aabb { .. }) => {
-                Narrowphase::sweep_circle_aabb(a.desc.center, 0.0, a.motion.vel * self.cfg.dt,
-                                               b.desc.center, self.half_extents_of(bi), b.motion.vel * self.cfg.dt)
-            }
+            (ColliderKind::Point, ColliderKind::Aabb { .. }) => Narrowphase::sweep_circle_aabb(
+                a.desc.center,
+                0.0,
+                a.motion.vel * self.cfg.dt,
+                b.desc.center,
+                self.half_extents_of(bi),
+                b.motion.vel * self.cfg.dt,
+            ),
             (ColliderKind::Aabb { .. }, ColliderKind::Point) => {
-                let hit = Narrowphase::sweep_circle_aabb(b.desc.center, 0.0, b.motion.vel * self.cfg.dt,
-                                                         a.desc.center, self.half_extents_of(ai), a.motion.vel * self.cfg.dt)?;
-                Some(SweepHit { toi: hit.toi, normal: -hit.normal, contact: hit.contact })
+                let hit = Narrowphase::sweep_circle_aabb(
+                    b.desc.center,
+                    0.0,
+                    b.motion.vel * self.cfg.dt,
+                    a.desc.center,
+                    self.half_extents_of(ai),
+                    a.motion.vel * self.cfg.dt,
+                )?;
+                Some(SweepHit {
+                    toi: hit.toi,
+                    normal: -hit.normal,
+                    contact: hit.contact,
+                })
             }
             (ColliderKind::Point, ColliderKind::Circle { radius: r }) => {
-                Narrowphase::sweep_circle_circle(a.desc.center, 0.0, a.motion.vel * self.cfg.dt,
-                                                 b.desc.center, r, b.motion.vel * self.cfg.dt)
+                Narrowphase::sweep_circle_circle(
+                    a.desc.center,
+                    0.0,
+                    a.motion.vel * self.cfg.dt,
+                    b.desc.center,
+                    r,
+                    b.motion.vel * self.cfg.dt,
+                )
             }
             (ColliderKind::Circle { radius: r }, ColliderKind::Point) => {
-                let hit = Narrowphase::sweep_circle_circle(b.desc.center, 0.0, b.motion.vel * self.cfg.dt,
-                                                           a.desc.center, r, a.motion.vel * self.cfg.dt)?;
-                Some(SweepHit { toi: hit.toi, normal: -hit.normal, contact: hit.contact })
+                let hit = Narrowphase::sweep_circle_circle(
+                    b.desc.center,
+                    0.0,
+                    b.motion.vel * self.cfg.dt,
+                    a.desc.center,
+                    r,
+                    a.motion.vel * self.cfg.dt,
+                )?;
+                Some(SweepHit {
+                    toi: hit.toi,
+                    normal: -hit.normal,
+                    contact: hit.contact,
+                })
             }
             (ColliderKind::Point, ColliderKind::Point) => None,
         }
@@ -574,7 +867,9 @@ impl PhysicsWorld {
         let mut seen: HashSet<(usize, usize)> = HashSet::new();
         for v in self.grid.values() {
             let n = v.len();
-            if n >= 2 { candidate_pairs += n * (n - 1) / 2; }
+            if n >= 2 {
+                candidate_pairs += n * (n - 1) / 2;
+            }
             for i in 0..n {
                 for j in (i + 1)..n {
                     let a = v[i];
@@ -584,11 +879,18 @@ impl PhysicsWorld {
                 }
             }
         }
-        WorldStats { entries, cells, candidate_pairs, unique_pairs: seen.len() }
+        WorldStats {
+            entries,
+            cells,
+            candidate_pairs,
+            unique_pairs: seen.len(),
+        }
     }
 
     /// Return timing breakdown for the last `end_frame`/`generate_events` runs.
-    pub fn timing(&self) -> Option<WorldTiming> { self.last_timing }
+    pub fn timing(&self) -> Option<WorldTiming> {
+        self.last_timing
+    }
 }
 
 #[cfg(test)]
@@ -627,10 +929,30 @@ mod tests {
     fn test_mask_mutual_consent() {
         let mut w = PhysicsWorld::new(cfg());
         w.begin_frame();
-        let a_mask = LayerMask { layer: 1, collides_with: 2, exclude: 0 };
-        let b_mask = LayerMask { layer: 2, collides_with: 0, exclude: 0 };
-        w.push_aabb(Vec2::new(-0.5, 0.0), Vec2::splat(0.5), Vec2::new(1.0, 0.0), a_mask, None);
-        w.push_aabb(Vec2::new(0.5, 0.0), Vec2::splat(0.5), Vec2::ZERO, b_mask, None);
+        let a_mask = LayerMask {
+            layer: 1,
+            collides_with: 2,
+            exclude: 0,
+        };
+        let b_mask = LayerMask {
+            layer: 2,
+            collides_with: 0,
+            exclude: 0,
+        };
+        w.push_aabb(
+            Vec2::new(-0.5, 0.0),
+            Vec2::splat(0.5),
+            Vec2::new(1.0, 0.0),
+            a_mask,
+            None,
+        );
+        w.push_aabb(
+            Vec2::new(0.5, 0.0),
+            Vec2::splat(0.5),
+            Vec2::ZERO,
+            b_mask,
+            None,
+        );
         w.end_frame();
         w.generate_events();
         assert_eq!(w.drain_events().len(), 0);
@@ -641,7 +963,13 @@ mod tests {
         let mut w = PhysicsWorld::new(cfg());
         w.begin_frame();
         let mask = LayerMask::simple(1, 1);
-        let a = w.push_circle(Vec2::new(-2.0, 0.0), 0.5, Vec2::new(4.0, 0.0), mask, Some(11));
+        let a = w.push_circle(
+            Vec2::new(-2.0, 0.0),
+            0.5,
+            Vec2::new(4.0, 0.0),
+            mask,
+            Some(11),
+        );
         let b = w.push_circle(Vec2::new(0.0, 0.0), 0.5, Vec2::ZERO, mask, Some(22));
         w.end_frame();
         w.generate_events();
@@ -661,7 +989,13 @@ mod tests {
         let mut w = PhysicsWorld::new(cfg());
         w.begin_frame();
         let mask = LayerMask::simple(1, 1);
-        let id_a = w.push_aabb(Vec2::new(0.0, 0.0), Vec2::splat(1.0), Vec2::ZERO, mask, Some(100));
+        let id_a = w.push_aabb(
+            Vec2::new(0.0, 0.0),
+            Vec2::splat(1.0),
+            Vec2::ZERO,
+            mask,
+            Some(100),
+        );
         let id_b = w.push_circle(Vec2::new(3.0, 0.0), 1.0, Vec2::ZERO, mask, Some(200));
         w.end_frame();
         // point inside AABB
@@ -684,10 +1018,24 @@ mod tests {
         let mut w = PhysicsWorld::new(cfg());
         w.begin_frame();
         let mask = LayerMask::simple(1, 1);
-        let id_a = w.push_aabb(Vec2::new(2.0, 0.0), Vec2::splat(0.5), Vec2::ZERO, mask, Some(1));
-        let id_b = w.push_aabb(Vec2::new(4.0, 0.0), Vec2::splat(0.5), Vec2::ZERO, mask, Some(2));
+        let id_a = w.push_aabb(
+            Vec2::new(2.0, 0.0),
+            Vec2::splat(0.5),
+            Vec2::ZERO,
+            mask,
+            Some(1),
+        );
+        let id_b = w.push_aabb(
+            Vec2::new(4.0, 0.0),
+            Vec2::splat(0.5),
+            Vec2::ZERO,
+            mask,
+            Some(2),
+        );
         w.end_frame();
-        let hit = w.raycast(Vec2::new(0.0, 0.0), Vec2::new(1.0, 0.0), mask, 10.0).unwrap();
+        let hit = w
+            .raycast(Vec2::new(0.0, 0.0), Vec2::new(1.0, 0.0), mask, 10.0)
+            .unwrap();
         assert_eq!(hit.0, id_a);
         let hit2 = w.raycast(Vec2::new(0.0, 0.0), Vec2::new(-1.0, 0.0), mask, 10.0);
         assert!(hit2.is_none());

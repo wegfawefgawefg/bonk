@@ -145,4 +145,3 @@ pub trait NarrowphaseApi {
         v1: Vec2,
     ) -> Option<SweepHit>;
 }
-
