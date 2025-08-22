@@ -1,14 +1,10 @@
-pub fn add(left: u64, right: u64) -> u64 {
-    left + right
-}
+//! bonk: detection-only physics engine (ephemeral world, no resolution)
 
-#[cfg(test)]
-mod tests {
-    use super::*;
+pub mod types;
+pub mod api;
+pub mod world;
+pub mod narrowphase;
 
-    #[test]
-    fn it_works() {
-        let result = add(2, 2);
-        assert_eq!(result, 4);
-    }
-}
+pub use crate::types::*;
+pub use crate::api::*;
+pub use crate::world::PhysicsWorld;
