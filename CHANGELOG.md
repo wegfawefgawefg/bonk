@@ -8,3 +8,5 @@ All notable changes to this project will be documented in this file.
 - Event emission (overlap/sweep), queries, and pairwise helpers.
 - Examples and basic CI.
 
+## 0.9.0 — FLESHED OUT
+- Everything is fleshed out.
