@@ -1,3 +1,9 @@
+<p align="center">
+  <img src="assets/bonk_logo_small.png" alt="bonk logo" width="256" />
+</p>
+
+Bonk is a 2D physics engine that doesn't have physics. It never resolves collisions. Most games want bespoke collision behavior, and fighting general-purpose solvers (hi, Box2D) is no fun. Bonk only detects interactions and emits events; you decide how to respond.
+
 bonk — detection-only 2D physics (ephemeral)
 
 Overview
