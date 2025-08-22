@@ -1,0 +1,906 @@
+//! Single-ephemeral-grid, detection-only physics API spec for a Breakout-style game.
+//!
+//! Goals:
+//! - Rebuild the world each frame (ephemeral). No internal persistent state required.
+//! - Uniform grid broadphase; narrowphase supports AABB, Circle, Point, and rays/segments.
+//! - Continuous collision detection via relative velocity (TOI).
+//! - Event emission only; caller handles resolution/response.
+//! - Simple masking (layer/collides_with/exclude) and optional user-provided keys.
+//!
+//! This file is a **spec**: types + function/trait signatures and semantics. No implementations.
+
+use glam::Vec2;
+
+/// User-defined opaque key carried through events/queries (e.g., pack your `VID`).
+pub type ColKey = u64;
+
+/// Bitmask-based filtering.
+#[derive(Copy, Clone, Debug, Default)]
+pub struct LayerMask {
+    /// Layer(s) this collider belongs to.
+    pub layer: u32,
+    /// Layers this collider wants to collide with.
+    pub collides_with: u32,
+    /// Extra mask to exclude (applied after `collides_with`).
+    pub exclude: u32,
+}
+
+impl LayerMask {
+    /// Convenience constructor.
+    pub fn simple(layer: u32, collides_with: u32) -> Self { Self { layer, collides_with, exclude: 0 } }
+
+    /// Pair filtering rule (spec):
+    /// A may hit B iff `(A.collides_with & B.layer) != 0` AND `(A.exclude & B.layer) == 0`.
+    /// Engines SHOULD also check the symmetric predicate (B→A) to require mutual consent.
+    pub fn allows(self, other: LayerMask) -> bool {
+        let hit = (self.collides_with & other.layer) != 0;
+        let blocked = (self.exclude & other.layer) != 0;
+        hit && !blocked
+    }
+}
+
+/// Supported collider shapes.
+#[derive(Copy, Clone, Debug)]
+pub enum ColliderKind {
+    /// Centered axis-aligned box (half extents along X/Y).
+    Aabb { half_extents: Vec2 },
+    /// Centered circle.
+    Circle { radius: f32 },
+    /// Mathematical point.
+    Point,
+}
+
+/// One collider instance to be considered for **this frame**.
+#[derive(Copy, Clone, Debug)]
+pub struct ColliderDesc {
+    pub kind: ColliderKind,
+    pub center: Vec2,
+    pub mask: LayerMask,
+    /// Optional user key echoed in events and query results.
+    pub user_key: Option<ColKey>,
+}
+
+/// Per-frame motion used for continuous detection.
+#[derive(Copy, Clone, Debug, Default)]
+pub struct Motion {
+    /// Velocity over the frame (units per frame). CCD uses relative velocity.
+    pub vel: Vec2,
+}
+
+/// Overlap contact result (discrete).
+#[derive(Copy, Clone, Debug)]
+pub struct Overlap {
+    /// Approximate separating normal (may be (0,0) for degenerate cases).
+    pub normal: Vec2,
+    /// Penetration depth (≥ 0).
+    pub depth: f32,
+    /// A representative contact point (approx for AABBs).
+    pub contact: Vec2,
+}
+
+/// Sweep (time-of-impact) result for continuous detection.
+#[derive(Copy, Clone, Debug)]
+pub struct SweepHit {
+    /// Fraction in [0,1] where first impact occurs within the frame.
+    pub toi: f32,
+    /// Normal at impact (points from B into A).
+    pub normal: Vec2,
+    /// Representative impact/contact point.
+    pub contact: Vec2,
+}
+
+/// Event discriminator.
+#[derive(Copy, Clone, Debug)]
+pub enum EventKind { Overlap, Sweep }
+
+/// Frame-local handle for colliders inserted this frame.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct FrameId(pub u32);
+
+/// Collision event emitted after generation.
+#[derive(Copy, Clone, Debug)]
+pub struct Event {
+    pub kind: EventKind,
+    pub a: FrameId,
+    pub b: FrameId,
+    pub a_key: Option<ColKey>,
+    pub b_key: Option<ColKey>,
+    pub overlap: Option<Overlap>,
+    pub sweep: Option<SweepHit>,
+}
+
+/// World-level configuration for the ephemeral detector.
+#[derive(Clone, Debug)]
+pub struct WorldConfig {
+    /// Grid cell size in world units (typ. 32–64 for Breakout tiles).
+    pub cell_size: f32,
+    /// Simulation step used when interpreting velocities (e.g., 1/60).
+    pub dt: f32,
+    /// If true, dynamic binning uses swept AABB over `center .. center + vel*dt`.
+    pub tighten_swept_aabb: bool,
+    /// Emit discrete overlap events for zero-relative-velocity pairs.
+    pub enable_overlap_events: bool,
+    /// Emit first-TOI sweep events when relative velocity is non-zero.
+    pub enable_sweep_events: bool,
+    /// Maximum number of events to emit per frame; extra are dropped.
+    pub max_events: usize,
+}
+
+/// Public API contract for the detection-only physics world.
+pub trait PhysicsWorldApi {
+    /// Construct a new world with the given configuration.
+    fn new(cfg: WorldConfig) -> Self where Self: Sized;
+
+    // --- Frame lifecycle ---------------------------------------------------
+
+    /// Begin a new frame. Clears ephemeral storage used for the previous frame.
+    fn begin_frame(&mut self);
+
+    /// Insert a collider for this frame and return its frame-local handle.
+    fn push(&mut self, desc: ColliderDesc, motion: Motion) -> FrameId;
+
+    /// Convenience: push a circle collider.
+    fn push_circle(&mut self, center: Vec2, radius: f32, vel: Vec2,
+                   mask: LayerMask, user_key: Option<ColKey>) -> FrameId;
+
+    /// Convenience: push an AABB collider (center + half extents).
+    fn push_aabb(&mut self, center: Vec2, half_extents: Vec2, vel: Vec2,
+                 mask: LayerMask, user_key: Option<ColKey>) -> FrameId;
+
+    /// Convenience: push a point collider.
+    fn push_point(&mut self, p: Vec2, vel: Vec2,
+                  mask: LayerMask, user_key: Option<ColKey>) -> FrameId;
+
+    /// Finalize insertions and build the uniform grid.
+    fn end_frame(&mut self);
+
+    /// Run broadphase & narrowphase and fill the internal event buffer.
+    fn generate_events(&mut self);
+
+    /// Drain and return the accumulated events for this frame.
+    fn drain_events(&mut self) -> Vec<Event>;
+
+    // --- Queries -----------------------------------------------------------
+
+    /// Raycast against the current frame's colliders. Returns closest hit.
+    fn raycast(&self, origin: Vec2, dir: Vec2, mask: LayerMask, max_t: f32)
+        -> Option<(FrameId, SweepHit, Option<ColKey>)>;
+
+    /// Return all colliders whose shapes contain the point `p` (after masking).
+    fn query_point(&self, p: Vec2, mask: LayerMask) -> Vec<(FrameId, Option<ColKey>)>;
+
+    /// Return all colliders overlapping the given centered AABB.
+    fn query_aabb(&self, center: Vec2, half_extents: Vec2, mask: LayerMask)
+        -> Vec<(FrameId, Option<ColKey>)>;
+
+    /// Return all colliders overlapping the given circle.
+    fn query_circle(&self, center: Vec2, radius: f32, mask: LayerMask)
+        -> Vec<(FrameId, Option<ColKey>)>;
+
+    // --- Pairwise checks ---------------------------------------------------
+
+    /// Overlap test between two frame-local colliders (same-frame only).
+    fn overlap_pair(&self, a: FrameId, b: FrameId) -> Option<Overlap>;
+
+    /// Sweep test (relative velocity) between two frame-local colliders.
+    fn sweep_pair(&self, a: FrameId, b: FrameId) -> Option<SweepHit>;
+
+    /// Overlap test between two user keys (if unique keys were provided).
+    fn overlap_by_key(&self, a: ColKey, b: ColKey) -> Option<Overlap>;
+
+    /// Sweep test between two user keys.
+    fn sweep_by_key(&self, a: ColKey, b: ColKey) -> Option<SweepHit>;
+}
+
+/// Narrowphase and primitive intersection signatures to be provided.
+pub trait NarrowphaseApi {
+    // Rays / segments -------------------------------------------------------
+
+    fn ray_aabb(origin: Vec2, dir: Vec2, aabb_min: Vec2, aabb_max: Vec2) -> Option<SweepHit>;
+    fn ray_circle(origin: Vec2, dir: Vec2, center: Vec2, r: f32) -> Option<SweepHit>;
+    fn line_segment_aabb(a: Vec2, b: Vec2, aabb_min: Vec2, aabb_max: Vec2) -> Option<SweepHit>;
+    fn line_segment_circle(a: Vec2, b: Vec2, center: Vec2, r: f32) -> Option<SweepHit>;
+
+    // Overlaps --------------------------------------------------------------
+
+    fn overlap_aabb_aabb(c0: Vec2, h0: Vec2, c1: Vec2, h1: Vec2) -> Option<Overlap>;
+    fn overlap_circle_circle(c0: Vec2, r0: f32, c1: Vec2, r1: f32) -> Option<Overlap>;
+    fn overlap_point_aabb(p: Vec2, c: Vec2, h: Vec2) -> bool;
+    fn overlap_point_circle(p: Vec2, c: Vec2, r: f32) -> bool;
+
+    // Sweeps (relative velocity variants expected in world impl) ------------
+
+    fn sweep_aabb_aabb(c0: Vec2, h0: Vec2, v0: Vec2,
+                       c1: Vec2, h1: Vec2, v1: Vec2) -> Option<SweepHit>;
+
+    fn sweep_circle_aabb(c: Vec2, r: f32, v: Vec2,
+                         box_c: Vec2, box_h: Vec2, box_v: Vec2) -> Option<SweepHit>;
+
+    fn sweep_circle_circle(c0: Vec2, r0: f32, v0: Vec2,
+                           c1: Vec2, r1: f32, v1: Vec2) -> Option<SweepHit>;
+}
+
+/// Re-exports commonly used items for downstream crates/apps.
+pub mod prelude {
+    pub use super::{
+        ColKey, LayerMask, ColliderKind, ColliderDesc, Motion,
+        Overlap, SweepHit, EventKind, Event, FrameId,
+        WorldConfig, PhysicsWorldApi, NarrowphaseApi,
+    };
+}
+
+/* -------------------------------------------------------------------------
+Example usage (spec):
+
+use glam::Vec2;
+use crate::prelude::*;
+
+fn frame<W: PhysicsWorldApi>(world: &mut W) {
+    world.begin_frame();
+
+    let ball_key = Some(0xDEAD_BEEF);
+    world.push_circle(Vec2::new(100.0, 200.0), 6.0, Vec2::new(240.0, -180.0),
+        LayerMask::simple(1<<1, 1<<0), ball_key);
+
+    // bricks
+    for brick in 0..10 {
+        let center = Vec2::new(32.0 + brick as f32 * 64.0, 400.0);
+        world.push_aabb(center, Vec2::splat(30.0), Vec2::ZERO,
+            LayerMask::simple(1<<0, 1<<1), Some(1000 + brick as u64));
+    }
+
+    world.end_frame();
+    world.generate_events();
+
+    for e in world.drain_events() {
+        match e.kind { EventKind::Sweep => {/* reflect ball, mark brick */} _ => {} }
+    }
+}
+*/
+
+// -------------------------------------------------------------------------
+// examples/ (consumer stubs)
+//
+// Suggested Cargo.toml (consumer):
+// [dependencies]
+// glam = "0.27"
+// physics_spec = { path = "." } // if this spec is your crate root
+//
+// File: examples/basic.rs
+// ------------------------------------------------------------
+// use glam::Vec2;
+// use physics_spec::prelude::*;
+//
+// /// Minimal no-op world to demonstrate API usage. Replace with your real impl.
+// struct DummyWorld;
+//
+// impl PhysicsWorldApi for DummyWorld {
+//     fn new(_cfg: WorldConfig) -> Self { Self }
+//     fn begin_frame(&mut self) {}
+//     fn push(&mut self, _desc: ColliderDesc, _motion: Motion) -> FrameId { FrameId(0) }
+//     fn push_circle(&mut self, center: Vec2, radius: f32, vel: Vec2,
+//                    mask: LayerMask, user_key: Option<ColKey>) -> FrameId {
+//         self.push(ColliderDesc { kind: ColliderKind::Circle { radius }, center, mask, user_key }, Motion { vel })
+//     }
+//     fn push_aabb(&mut self, center: Vec2, half_extents: Vec2, vel: Vec2,
+//                  mask: LayerMask, user_key: Option<ColKey>) -> FrameId {
+//         self.push(ColliderDesc { kind: ColliderKind::Aabb { half_extents }, center, mask, user_key }, Motion { vel })
+//     }
+//     fn push_point(&mut self, p: Vec2, vel: Vec2,
+//                   mask: LayerMask, user_key: Option<ColKey>) -> FrameId {
+//         self.push(ColliderDesc { kind: ColliderKind::Point, center: p, mask, user_key }, Motion { vel })
+//     }
+//     fn end_frame(&mut self) {}
+//     fn generate_events(&mut self) {}
+//     fn drain_events(&mut self) -> Vec<Event> { Vec::new() }
+//
+//     fn raycast(&self, _origin: Vec2, _dir: Vec2, _mask: LayerMask, _max_t: f32)
+//         -> Option<(FrameId, SweepHit, Option<ColKey>)> { None }
+//     fn query_point(&self, _p: Vec2, _mask: LayerMask) -> Vec<(FrameId, Option<ColKey>)> { Vec::new() }
+//     fn query_aabb(&self, _c: Vec2, _h: Vec2, _m: LayerMask) -> Vec<(FrameId, Option<ColKey>)> { Vec::new() }
+//     fn query_circle(&self, _c: Vec2, _r: f32, _m: LayerMask) -> Vec<(FrameId, Option<ColKey>)> { Vec::new() }
+//     fn overlap_pair(&self, _a: FrameId, _b: FrameId) -> Option<Overlap> { None }
+//     fn sweep_pair(&self, _a: FrameId, _b: FrameId) -> Option<SweepHit> { None }
+//     fn overlap_by_key(&self, _a: ColKey, _b: ColKey) -> Option<Overlap> { None }
+//     fn sweep_by_key(&self, _a: ColKey, _b: ColKey) -> Option<SweepHit> { None }
+// }
+//
+// fn drive_one_frame<W: PhysicsWorldApi>(world: &mut W) {
+//     world.begin_frame();
+//
+//     // Ball
+//     let ball_key = Some(0xDEAD_BEEFu64);
+//     world.push_circle(Vec2::new(100.0, 200.0), 6.0, Vec2::new(240.0, -180.0),
+//         LayerMask::simple(1<<1, 1<<0), ball_key);
+//
+//     // One brick row
+//     for i in 0..10 {
+//         let center = Vec2::new(32.0 + i as f32 * 64.0, 400.0);
+//         world.push_aabb(center, Vec2::splat(30.0), Vec2::ZERO,
+//             LayerMask::simple(1<<0, 1<<1), Some(1000 + i as u64));
+//     }
+//
+//     world.end_frame();
+//     world.generate_events();
+//
+//     for e in world.drain_events() {
+//         match e.kind {
+//             EventKind::Sweep => {
+//                 // reflect ball, mark brick destroyed, etc.
+//             }
+//             EventKind::Overlap => {
+//                 // triggers/sensors or zero-rel-vel contacts
+//             }
+//         }
+//     }
+// }
+//
+// fn main() {
+//     let mut world = DummyWorld::new(WorldConfig {
+//         cell_size: 64.0,
+//         dt: 1.0/60.0,
+//         tighten_swept_aabb: true,
+//         enable_overlap_events: true,
+//         enable_sweep_events: true,
+//         max_events: 10_000,
+//     });
+//     drive_one_frame(&mut world);
+// }
+//
+// File: examples/queries.rs
+// ------------------------------------------------------------
+// use glam::Vec2;
+// use physics_spec::prelude::*;
+// struct DummyWorld; /* impl as in basic.rs */
+// fn main() {
+//     let mut world = DummyWorld::new(WorldConfig {
+//         cell_size: 64.0, dt: 1.0/60.0, tighten_swept_aabb: true,
+//         enable_overlap_events: true, enable_sweep_events: true, max_events: 1024,
+//     });
+//     world.begin_frame();
+//     world.push_aabb(Vec2::ZERO, Vec2::splat(50.0), Vec2::ZERO, LayerMask::simple(1, !0), Some(1));
+//     world.end_frame();
+//
+//     // Raycast from left to right through the AABB
+//     if let Some((_id, hit, _key)) = world.raycast(Vec2::new(-200.0, 0.0), Vec2::new(1.0, 0.0), LayerMask::simple(!0, !0), 1000.0) {
+//         println!("hit toi={} normal=({:.2},{:.2})", hit.toi, hit.normal.x, hit.normal.y);
+//     }
+//
+//     // AABB query
+//     let hits = world.query_aabb(Vec2::ZERO, Vec2::splat(60.0), LayerMask::simple(!0, !0));
+//     println!("query_aabb hits: {}", hits.len());
+// }
+
+
+/* -------------------------------------------------------------------------
+Repository plan (scaffold)
+
+repo/
+├─ Cargo.toml                 # workspace
+├─ rust-toolchain.toml        # (optional: pin toolchain)
+├─ .editorconfig              # whitespace rules
+├─ .gitignore
+├─ .github/workflows/ci.yml   # fmt + clippy + test
+├─ crates/
+│  ├─ physics-spec/
+│  │  ├─ Cargo.toml
+│  │  └─ src/
+│  │     └─ lib.rs            # this spec file (moved here)
+│  └─ physics/                # implementation crate (to be filled by agents)
+│     ├─ Cargo.toml
+│     └─ src/
+│        ├─ lib.rs
+│        ├─ grid.rs
+│        ├─ narrowphase.rs
+│        ├─ world.rs
+│        └─ util.rs
+├─ examples/
+│  ├─ basic.rs
+│  └─ queries.rs
+└─ README.md
+
+// --- workspace Cargo.toml ---
+// (save as repo/Cargo.toml)
+// =============================================
+// [workspace]
+// members = [
+//   "crates/physics-spec",
+//   "crates/physics",
+// ]
+// resolver = "2"
+//
+// [workspace.package]
+// edition = "2021"
+// license = "MIT OR Apache-2.0"
+//
+// [workspace.dependencies]
+// glam = "0.27"
+// thiserror = "1"
+//
+// [workspace.lints.rust]
+// unsafe_code = "forbid"
+//
+// [workspace.lints.clippy]
+// pedantic = { level = "warn", priority = -1 }
+// nursery = { level = "warn", priority = -1 }
+
+// --- crates/physics-spec/Cargo.toml ---
+// =============================================
+// [package]
+// name = "physics-spec"
+// version = "0.1.0"
+// edition = "2021"
+// description = "Detection-only physics API spec (ephemeral grid)"
+// license = "MIT OR Apache-2.0"
+//
+// [dependencies]
+// glam = { workspace = true }
+
+// --- crates/physics-spec/src/lib.rs ---
+// =============================================
+// // Move the contents of this file (physics_spec.rs) here.
+
+// --- crates/physics/Cargo.toml ---
+// =============================================
+// [package]
+// name = "physics"
+// version = "0.1.0"
+// edition = "2021"
+// description = "Detection-only physics implementation"
+// license = "MIT OR Apache-2.0"
+//
+// [dependencies]
+// glam = { workspace = true }
+// physics-spec = { path = "../physics-spec" }
+// thiserror = { workspace = true }
+//
+// [features]
+// default = []
+// persistent-grid = []    # optional later optimization
+
+// --- crates/physics/src/lib.rs (stub) ---
+// =============================================
+// pub mod grid;
+// pub mod narrowphase;
+// pub mod world;
+// pub mod util;
+//
+// pub use physics_spec::prelude::*;
+//
+// // Re-export a concrete world type so examples/apps can do `use physics::World;`
+// pub use world::World;
+
+// --- crates/physics/src/world.rs (stub signatures) ---
+// =============================================
+// use glam::Vec2;
+// use physics_spec::prelude::*;
+//
+// pub struct World { /* fields TBD by agents */ }
+//
+// impl PhysicsWorldApi for World {
+//     fn new(_cfg: WorldConfig) -> Self { Self { /* .. */ } }
+//     fn begin_frame(&mut self) {}
+//     fn push(&mut self, _desc: ColliderDesc, _motion: Motion) -> FrameId { FrameId(0) }
+//     fn push_circle(&mut self, c: Vec2, r: f32, v: Vec2, m: LayerMask, k: Option<ColKey>) -> FrameId {
+//         self.push(ColliderDesc { kind: ColliderKind::Circle { radius: r }, center: c, mask: m, user_key: k }, Motion { vel: v })
+//     }
+//     fn push_aabb(&mut self, c: Vec2, h: Vec2, v: Vec2, m: LayerMask, k: Option<ColKey>) -> FrameId {
+//         self.push(ColliderDesc { kind: ColliderKind::Aabb { half_extents: h }, center: c, mask: m, user_key: k }, Motion { vel: v })
+//     }
+//     fn push_point(&mut self, p: Vec2, v: Vec2, m: LayerMask, k: Option<ColKey>) -> FrameId {
+//         self.push(ColliderDesc { kind: ColliderKind::Point, center: p, mask: m, user_key: k }, Motion { vel: v })
+//     }
+//     fn end_frame(&mut self) {}
+//     fn generate_events(&mut self) {}
+//     fn drain_events(&mut self) -> Vec<Event> { Vec::new() }
+//     fn raycast(&self, _o: Vec2, _d: Vec2, _m: LayerMask, _max_t: f32) -> Option<(FrameId, SweepHit, Option<ColKey>)> { None }
+//     fn query_point(&self, _p: Vec2, _m: LayerMask) -> Vec<(FrameId, Option<ColKey>)> { Vec::new() }
+//     fn query_aabb(&self, _c: Vec2, _h: Vec2, _m: LayerMask) -> Vec<(FrameId, Option<ColKey>)> { Vec::new() }
+//     fn query_circle(&self, _c: Vec2, _r: f32, _m: LayerMask) -> Vec<(FrameId, Option<ColKey>)> { Vec::new() }
+//     fn overlap_pair(&self, _a: FrameId, _b: FrameId) -> Option<Overlap> { None }
+//     fn sweep_pair(&self, _a: FrameId, _b: FrameId) -> Option<SweepHit> { None }
+//     fn overlap_by_key(&self, _a: ColKey, _b: ColKey) -> Option<Overlap> { None }
+//     fn sweep_by_key(&self, _a: ColKey, _b: ColKey) -> Option<SweepHit> { None }
+// }
+
+// --- examples/basic.rs ---
+// =============================================
+// use glam::Vec2;
+// use physics::{World, prelude::*};
+//
+// fn main() {
+//     let mut world = World::new(WorldConfig {
+//         cell_size: 64.0,
+//         dt: 1.0/60.0,
+//         tighten_swept_aabb: true,
+//         enable_overlap_events: true,
+//         enable_sweep_events: true,
+//         max_events: 10_000,
+//     });
+//
+//     world.begin_frame();
+//     world.push_circle(Vec2::new(100.0, 200.0), 6.0, Vec2::new(240.0, -180.0), LayerMask::simple(1<<1, 1<<0), Some(1));
+//     world.push_aabb(Vec2::new(32.0, 400.0), Vec2::splat(30.0), Vec2::ZERO, LayerMask::simple(1<<0, 1<<1), Some(2));
+//     world.end_frame();
+//     world.generate_events();
+//     for e in world.drain_events() { println!("event: {:?}", e.kind); }
+// }
+
+// --- examples/queries.rs ---
+// =============================================
+// use glam::Vec2;
+// use physics::{World, prelude::*};
+//
+// fn main() {
+//     let mut world = World::new(WorldConfig { cell_size: 64.0, dt: 1.0/60.0, tighten_swept_aabb: true, enable_overlap_events: true, enable_sweep_events: true, max_events: 1024 });
+//     world.begin_frame();
+//     world.push_aabb(Vec2::ZERO, Vec2::splat(50.0), Vec2::ZERO, LayerMask::simple(1, !0), Some(42));
+//     world.end_frame();
+//     if let Some((_id, hit, _key)) = world.raycast(Vec2::new(-200.0, 0.0), Vec2::new(1.0, 0.0), LayerMask::simple(!0, !0), 1_000.0) {
+//         println!("hit toi={} n=({}, {})", hit.toi, hit.normal.x, hit.normal.y);
+//     }
+// }
+
+// --- .github/workflows/ci.yml ---
+// =============================================
+// name: CI
+// on: [push, pull_request]
+// jobs:
+//   rust:
+//     runs-on: ubuntu-latest
+//     steps:
+//       - uses: actions/checkout@v4
+//       - uses: dtolnay/rust-toolchain@stable
+//       - name: fmt
+//         run: cargo fmt --all -- --check
+//       - name: clippy
+//         run: cargo clippy --all-targets --all-features -- -D warnings
+//       - name: test
+//         run: cargo test --all
+
+// --- README.md (outline) ---
+// =============================================
+// # Detection-only Physics (Ephemeral Grid)
+// 
+// - Single-grid, rebuild-per-frame detector for arcade games (Breakout).
+// - You push colliders each frame; engine emits events and supports queries.
+// - You handle responses (reflections, destroys, scoring).
+//
+// ## Crates
+// - `physics-spec`: public API (traits, types).
+// - `physics`: implementation (uniform grid + narrowphase + CCD).
+//
+// ## Quickstart
+// ```bash
+// cargo run --example basic -p physics
+// ```
+//
+// ## Design notes
+// - CCD via relative velocity; bin movers by swept AABB.
+// - Masking: layer/collides_with/exclude; mutual-consent recommended.
+// - Optional feature: `persistent-grid` (not required for Breakout scale).
+//
+// ## License
+// MIT OR Apache-2.0
+*/
+
+
+/* -------------------------------------------------------------------------
+FINAL CLEAN SPEC: BONK (GPL-3.0-only)
+
+Notes:
+- This spec is implementation-agnostic and matches the simple, single-ephemeral-grid design.
+- Use this section as the source of truth for agents.
+- License intent for this repository: GPL-3.0-only.
+*/
+
+// Crate: bonk-spec (public API)
+// File: crates/bonk-spec/src/lib.rs
+// -------------------------------------------------------------------------
+// (Identical API to the spec above; repeated here to be the canonical copy under BONK naming.)
+
+use glam::Vec2;
+
+pub type ColKey = u64;
+
+#[derive(Copy, Clone, Debug, Default)]
+pub struct LayerMask {
+    pub layer: u32,
+    pub collides_with: u32,
+    pub exclude: u32,
+}
+impl LayerMask {
+    pub fn simple(layer: u32, collides_with: u32) -> Self { Self { layer, collides_with, exclude: 0 } }
+    pub fn allows(self, other: LayerMask) -> bool {
+        (self.collides_with & other.layer) != 0 && (self.exclude & other.layer) == 0
+    }
+}
+
+#[derive(Copy, Clone, Debug)]
+pub enum ColliderKind { Aabb { half_extents: Vec2 }, Circle { radius: f32 }, Point }
+
+#[derive(Copy, Clone, Debug)]
+pub struct ColliderDesc {
+    pub kind: ColliderKind,
+    pub center: Vec2,
+    pub mask: LayerMask,
+    pub user_key: Option<ColKey>,
+}
+
+#[derive(Copy, Clone, Debug, Default)]
+pub struct Motion { pub vel: Vec2 }
+
+#[derive(Copy, Clone, Debug)]
+pub struct Overlap { pub normal: Vec2, pub depth: f32, pub contact: Vec2 }
+
+#[derive(Copy, Clone, Debug)]
+pub struct SweepHit { pub toi: f32, pub normal: Vec2, pub contact: Vec2 }
+
+#[derive(Copy, Clone, Debug)]
+pub enum EventKind { Overlap, Sweep }
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct FrameId(pub u32);
+
+#[derive(Copy, Clone, Debug)]
+pub struct Event {
+    pub kind: EventKind,
+    pub a: FrameId,
+    pub b: FrameId,
+    pub a_key: Option<ColKey>,
+    pub b_key: Option<ColKey>,
+    pub overlap: Option<Overlap>,
+    pub sweep: Option<SweepHit>,
+}
+
+#[derive(Clone, Debug)]
+pub struct WorldConfig {
+    pub cell_size: f32,
+    pub dt: f32,
+    pub tighten_swept_aabb: bool,
+    pub enable_overlap_events: bool,
+    pub enable_sweep_events: bool,
+    pub max_events: usize,
+}
+
+pub trait PhysicsWorldApi {
+    fn new(cfg: WorldConfig) -> Self where Self: Sized;
+    fn begin_frame(&mut self);
+    fn push(&mut self, desc: ColliderDesc, motion: Motion) -> FrameId;
+    fn push_circle(&mut self, center: Vec2, radius: f32, vel: Vec2, mask: LayerMask, user_key: Option<ColKey>) -> FrameId;
+    fn push_aabb(&mut self, center: Vec2, half_extents: Vec2, vel: Vec2, mask: LayerMask, user_key: Option<ColKey>) -> FrameId;
+    fn push_point(&mut self, p: Vec2, vel: Vec2, mask: LayerMask, user_key: Option<ColKey>) -> FrameId;
+    fn end_frame(&mut self);
+    fn generate_events(&mut self);
+    fn drain_events(&mut self) -> Vec<Event>;
+    fn raycast(&self, origin: Vec2, dir: Vec2, mask: LayerMask, max_t: f32) -> Option<(FrameId, SweepHit, Option<ColKey>)>;
+    fn query_point(&self, p: Vec2, mask: LayerMask) -> Vec<(FrameId, Option<ColKey>)>;
+    fn query_aabb(&self, center: Vec2, half_extents: Vec2, mask: LayerMask) -> Vec<(FrameId, Option<ColKey>)>;
+    fn query_circle(&self, center: Vec2, radius: f32, mask: LayerMask) -> Vec<(FrameId, Option<ColKey>)>;
+    fn overlap_pair(&self, a: FrameId, b: FrameId) -> Option<Overlap>;
+    fn sweep_pair(&self, a: FrameId, b: FrameId) -> Option<SweepHit>;
+    fn overlap_by_key(&self, a: ColKey, b: ColKey) -> Option<Overlap>;
+    fn sweep_by_key(&self, a: ColKey, b: ColKey) -> Option<SweepHit>;
+}
+
+pub trait NarrowphaseApi {
+    fn ray_aabb(origin: Vec2, dir: Vec2, aabb_min: Vec2, aabb_max: Vec2) -> Option<SweepHit>;
+    fn ray_circle(origin: Vec2, dir: Vec2, center: Vec2, r: f32) -> Option<SweepHit>;
+    fn line_segment_aabb(a: Vec2, b: Vec2, aabb_min: Vec2, aabb_max: Vec2) -> Option<SweepHit>;
+    fn line_segment_circle(a: Vec2, b: Vec2, center: Vec2, r: f32) -> Option<SweepHit>;
+    fn overlap_aabb_aabb(c0: Vec2, h0: Vec2, c1: Vec2, h1: Vec2) -> Option<Overlap>;
+    fn overlap_circle_circle(c0: Vec2, r0: f32, c1: Vec2, r1: f32) -> Option<Overlap>;
+    fn overlap_point_aabb(p: Vec2, c: Vec2, h: Vec2) -> bool;
+    fn overlap_point_circle(p: Vec2, c: Vec2, r: f32) -> bool;
+    fn sweep_aabb_aabb(c0: Vec2, h0: Vec2, v0: Vec2, c1: Vec2, h1: Vec2, v1: Vec2) -> Option<SweepHit>;
+    fn sweep_circle_aabb(c: Vec2, r: f32, v: Vec2, box_c: Vec2, box_h: Vec2, box_v: Vec2) -> Option<SweepHit>;
+    fn sweep_circle_circle(c0: Vec2, r0: f32, v0: Vec2, c1: Vec2, r1: f32, v1: Vec2) -> Option<SweepHit>;
+}
+
+pub mod prelude { pub use super::*; }
+
+/* -------------------------------------------------------------------------
+UPDATED REPO PLAN (BONK, GPL-3.0-only, no CI)
+
+repo/
+├─ Cargo.toml                 # workspace
+├─ .editorconfig
+├─ .gitignore
+├─ crates/
+│  ├─ bonk-spec/
+│  │  ├─ Cargo.toml
+│  │  └─ src/
+│  │     └─ lib.rs
+│  └─ bonk/
+│     ├─ Cargo.toml
+│     └─ src/
+│        ├─ lib.rs
+│        ├─ grid.rs
+│        ├─ narrowphase.rs
+│        ├─ world.rs
+│        └─ util.rs
+├─ benches/                   # Criterion benches (lives under bonk crate or workspace)
+│  ├─ grid_binning.rs
+│  ├─ broadphase_pairs.rs
+│  ├─ narrowphase_shapes.rs
+│  ├─ raycast_throughput.rs
+│  ├─ end_to_end_events.rs
+│  └─ worst_case.rs
+├─ examples/
+│  ├─ basic.rs
+│  └─ queries.rs
+└─ README.md
+
+// workspace Cargo.toml
+[workspace]
+members = ["crates/bonk-spec", "crates/bonk"]
+resolver = "2"
+
+[workspace.package]
+edition = "2021"
+license = "GPL-3.0-only"
+
+[workspace.dependencies]
+glam = "0.27"
+thiserror = "1"
+criterion = "0.5"
+proptest = "1.5"
+rand = "0.8"
+rand_pcg = "0.3"
+
+// crates/bonk-spec/Cargo.toml
+[package]
+name = "bonk-spec"
+version = "0.1.0"
+edition = "2021"
+description = "Detection-only physics API spec (ephemeral grid)"
+license = "GPL-3.0-only"
+
+[dependencies]
+glam = { workspace = true }
+
+// crates/bonk/Cargo.toml
+[package]
+name = "bonk"
+version = "0.1.0"
+edition = "2021"
+description = "Detection-only physics implementation"
+license = "GPL-3.0-only"
+
+[dependencies]
+glam = { workspace = true }
+bonk-spec = { path = "../bonk-spec" }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+criterion = { workspace = true }
+proptest = { workspace = true }
+rand = { workspace = true }
+rand_pcg = { workspace = true }
+
+[features]
+default = []
+persistent-grid = []
+
+// crates/bonk/src/lib.rs
+pub mod grid; pub mod narrowphase; pub mod world; pub mod util;
+pub use bonk_spec::prelude::*;
+pub use world::World;
+
+// examples/basic.rs
+use glam::Vec2; use bonk::{World, prelude::*};
+fn main() { let mut world = World::new(WorldConfig{cell_size:64.0,dt:1.0/60.0,tighten_swept_aabb:true,enable_overlap_events:true,enable_sweep_events:true,max_events:10_000});
+    world.begin_frame();
+    world.push_circle(Vec2::new(100.0,200.0),6.0,Vec2::new(240.0,-180.0),LayerMask::simple(1<<1,1<<0),Some(1));
+    world.push_aabb(Vec2::new(32.0,400.0),Vec2::splat(30.0),Vec2::ZERO,LayerMask::simple(1<<0,1<<1),Some(2));
+    world.end_frame(); world.generate_events(); for e in world.drain_events(){ println!("{:?}", e.kind); }
+}
+
+// README Quickstart (updated)
+// cargo run --example basic -p bonk
+
+*/
+
+/* -------------------------------------------------------------------------
+PERFORMANCE & BENCHMARK SUITE (Criterion + proptest)
+
+Goals
+- Verify O(N) grid build and predictable pair counts as density varies.
+- Stress CCD (swept AABB binning) to avoid tunneling misses.
+- Measure throughput for common ops: binning, pair generation, narrowphase, raycast, end-to-end event generation.
+- Catch regressions with stable RNG seeds.
+
+Bench harness layout (under crates/bonk/benches/):
+  - grid_binning.rs          : vary N∈[1e2..1e6], size distributions, swept vs non-swept.
+  - broadphase_pairs.rs      : vary occupancy (avg colliders per cell), uniform vs clustered.
+  - narrowphase_shapes.rs    : AABB×AABB, Circle×AABB, Circle×Circle, Point queries.
+  - raycast_throughput.rs    : many rays across sparse/dense scenes; report hits/sec.
+  - end_to_end_events.rs     : push→end_frame→generate_events end-to-end throughput.
+  - worst_case.rs            : adversarial (everything in one cell), masking on/off.
+
+Test data: use `rand_pcg::Pcg64Mcg` with fixed seeds; provide CLI env overrides `BONK_SEED`.
+
+Key metrics to print (Criterion custom measurements optional):
+  - bin ops/sec, pair candidates/sec, narrowphase/sec.
+  - event count/frame, average toi.
+  - max cell occupancy, pair dedup efficiency.
+
+Example bench: grid_binning.rs
+--------------------------------
+use std::hint::black_box;
+use criterion::{criterion_group, criterion_main, Criterion, BatchSize};
+use rand::{Rng, SeedableRng};
+use rand_pcg::Pcg64Mcg;
+use glam::Vec2;
+use bonk::{prelude::*, World};
+
+fn gen_colliders(n: usize, seed: u64) -> Vec<(ColliderDesc, Motion)> {
+    let mut rng = Pcg64Mcg::seed_from_u64(seed);
+    let mut v = Vec::with_capacity(n);
+    for _ in 0..n {
+        let k = if rng.gen::<f32>() < 0.5 {
+            ColliderKind::Aabb { half_extents: Vec2::new(8.0 + rng.gen::<f32>()*24.0, 8.0 + rng.gen::<f32>()*24.0) }
+        } else {
+            ColliderKind::Circle { radius: 6.0 + rng.gen::<f32>()*18.0 }
+        };
+        let desc = ColliderDesc { kind: k, center: Vec2::new(rng.gen_range(-1000.0..1000.0), rng.gen_range(-1000.0..1000.0)), mask: LayerMask::simple(1, !0), user_key: None };
+        let motion = Motion { vel: Vec2::new(rng.gen_range(-400.0..400.0), rng.gen_range(-400.0..400.0)) };
+        v.push((desc, motion));
+    }
+    v
+}
+
+fn bench_grid_build(c: &mut Criterion) {
+    let mut group = c.benchmark_group("grid_build");
+    for &n in &[1_000usize, 10_000, 100_000] {
+        group.bench_function(format!("build_n={}", n), |b| {
+            b.iter_batched(
+                || (World::new(WorldConfig{cell_size:64.0,dt:1.0/60.0,tighten_swept_aabb:true,enable_overlap_events:false,enable_sweep_events:false,max_events:0}), gen_colliders(n, 1337))),
+                |(mut world, items)| {
+                    world.begin_frame();
+                    for (d, m) in items.iter() { let _ = world.push(*d, *m); }
+                    world.end_frame();
+                    black_box(());
+                },
+                BatchSize::LargeInput,
+            )
+        });
+    }
+    group.finish();
+}
+
+criterion_group!(benches, bench_grid_build);
+criterion_main!(benches);
+
+Property tests (crates/bonk/tests/*.rs)
+---------------------------------------
+// proptest: sweep relative velocity equivalence
+// sweep(a,vA,b,vB) == sweep(a,vA-vB,b,0) for finite TOI cases
+use glam::Vec2; use bonk::prelude::*; use proptest::prelude::*;
+
+proptest!{
+  #[test]
+  fn relative_velocity_equivalence(ax in -1000.0f32..1000.0, ay in -1000.0f32..1000.0,
+                                   bx in -1000.0f32..1000.0, by in -1000.0f32..1000.0,
+                                   vx in -400.0f32..400.0,  vy in -400.0f32..400.0) {
+    let a = ColliderDesc{ kind: ColliderKind::Circle{radius:10.0}, center: Vec2::new(ax, ay), mask: LayerMask::simple(!0,!0), user_key: None };
+    let b = ColliderDesc{ kind: ColliderKind::Aabb{half_extents:Vec2::splat(20.0)}, center: Vec2::new(bx, by), mask: LayerMask::simple(!0,!0), user_key: None };
+    // world impl must expose a helper or allow querying pair sweep; here we assume a helper exists
+    // (Agents: implement sweep_pair to use relative velocity internally.)
+    let vA = Vec2::new(vx, vy); let vB = Vec2::new(-vx*0.5, vy*0.25);
+    // Assert: if both are Some hits, TOIs match within epsilon
+    // (Glue code needed once impl exists.)
+  }
+}
+
+Additional tests to include:
+- Mask symmetry: requires_mutual_consent flag (if you add it) or enforce using LayerMask::allows both ways.
+- Raycast monotonicity: increasing max_t never removes a previous hit.
+- Swept bin coverage: moving circle vs thin wall cannot pass through when tighten_swept_aabb=true.
+
+How to run:
+- `cargo test -p bonk`
+- `cargo bench -p bonk`
+- Compare runs: Criterion stores baselines; use `--baseline` and `--save-baseline`.
+*/
+
