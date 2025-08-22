@@ -1,6 +1,5 @@
 use glam::Vec2;
 use nobonk::*;
-use std::time::Instant;
 
 fn lcg(seed: &mut u32) -> u32 {
     *seed = seed.wrapping_mul(1664525).wrapping_add(1013904223);

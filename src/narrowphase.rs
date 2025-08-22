@@ -166,10 +166,10 @@ impl NarrowphaseApi for Narrowphase {
             }
         }
 
-        if tmin < 0.0 || tmin > 1.0 {
+        if !(0.0..=1.0).contains(&tmin) {
             return None;
         }
-        let toi = tmin.max(0.0).min(1.0);
+        let toi = tmin.clamp(0.0, 1.0);
         let contact = a + d * toi;
         let normal = if toi == 0.0
             && (a.x >= aabb_min.x && a.x <= aabb_max.x && a.y >= aabb_min.y && a.y <= aabb_max.y)
@@ -204,7 +204,7 @@ impl NarrowphaseApi for Narrowphase {
         let t1 = (-bcoef + sqrt_disc) / (2.0 * acoef);
         let mut t = f32::INFINITY;
         for cand in [t0, t1] {
-            if cand >= 0.0 && cand <= 1.0 {
+            if (0.0..=1.0).contains(&cand) {
                 t = t.min(cand);
             }
         }

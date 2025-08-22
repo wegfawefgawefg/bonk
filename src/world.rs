@@ -179,7 +179,7 @@ impl PhysicsWorldApi for PhysicsWorld {
             None
         };
         let mut seen_pairs: HashSet<(usize, usize)> = HashSet::new();
-        let mut push_event = |ev: Event, buf: &mut Vec<Event>, max: usize| {
+        let push_event = |ev: Event, buf: &mut Vec<Event>, max: usize| {
             if buf.len() < max {
                 buf.push(ev);
             }
@@ -322,7 +322,7 @@ impl PhysicsWorldApi for PhysicsWorld {
                 c as f32 * cs
             }
         };
-        let cell_origin = Vec2::new(cell.0 as f32 * cs, cell.1 as f32 * cs);
+        let _cell_origin = Vec2::new(cell.0 as f32 * cs, cell.1 as f32 * cs);
         let mut t_max_x = if step_x != 0 {
             let nb = next_boundary(cell.0, step_x);
             (nb - origin.x) / dir.x
@@ -1025,7 +1025,7 @@ mod tests {
             mask,
             Some(1),
         );
-        let id_b = w.push_aabb(
+        let _id_b = w.push_aabb(
             Vec2::new(4.0, 0.0),
             Vec2::splat(0.5),
             Vec2::ZERO,
