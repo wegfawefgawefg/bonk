@@ -1,0 +1,126 @@
+nobonk quick guide for llms/agents 
+
+scope
+- 2D detection-only. No resolution/forces. Ephemeral per-frame world.
+- shapes: AABB (center + half_extents), Circle (center + radius), Point.
+- math: glam::Vec2. import: `use nobonk::*; use glam::Vec2;`
+
+frame lifecycle (call order)
+1) world.begin_frame()
+2) world.push_* per collider (AABB/Circle/Point) with velocity + mask (+ optional user key)
+3) world.end_frame()  // builds grid and aabbs; required before queries/events
+4) world.generate_events()  // optional, only if you want events
+5) world.drain_events() -> Vec<Event>  // optional, consumes internal buffer
+
+config (WorldConfig)
+- cell_size: f32                   // world units per grid cell (>= ~1e-5)
+- dt: f32                          // seconds (or ticks) per frame; scales CCD
+- tighten_swept_aabb: bool         // if true, grid uses swept bounds (p0..p1)
+- enable_overlap_events: bool      // emit discrete overlap events
+- enable_sweep_events: bool        // emit CCD TOI events when relative vel != 0
+- max_events: usize                // cap; extras are dropped
+- enable_timing: bool              // record timing breakdowns
+
+core ids and masks
+- FrameId(u32): frame-local handle for a pushed collider. Not persistent across frames.
+- ColKey = u64: optional user key, echoed in events/queries (use to map to your ECS/entity ids).
+- LayerMask { layer: u32, collides_with: u32, exclude: u32 }
+  - convenience: LayerMask::simple(layer, collides_with)
+  - consent rule: A may hit B iff
+      (A.collides_with & B.layer) != 0 && (A.exclude & B.layer) == 0
+    engines using this library SHOULD also require symmetric consent (B vs A).
+    world methods enforce mutual consent for events and queries.
+
+collider description and motion
+- ColliderKind:
+  - Aabb { half_extents: Vec2 }
+  - Circle { radius: f32 }
+  - Point
+- ColliderDesc { kind: ColliderKind, center: Vec2, mask: LayerMask, user_key: Option<ColKey> }
+- Motion { vel: Vec2 }  // per-frame velocity; CCD uses relative velocity scaled by dt
+
+events and hits
+- EventKind: Overlap | Sweep
+- Overlap { normal: Vec2, depth: f32, contact: Vec2 }
+  - normals generally point from B into A.
+  - AABB↔AABB and Circle↔Circle fill normal/depth/contact.
+  - Circle↔AABB overlap returns a representative contact with zero normal/depth.
+- SweepHit { toi: f32 in [0,1], normal: Vec2, contact: Vec2 }
+- Event { kind, a: FrameId, b: FrameId, a_key: Option<ColKey>, b_key: Option<ColKey>, overlap: Option<Overlap>, sweep: Option<SweepHit> }
+- generation semantics:
+  - pairs built from uniform grid, deduplicated across cells.
+  - if relative velocity != ~0 and enable_sweep_events, emit Sweep if any; else if enable_overlap_events, emit Overlap if any.
+  - if relative velocity == ~0 and enable_overlap_events, emit Overlap if any.
+  - at most one event per pair; buffer capped by max_events.
+  - duplicate user_key within a frame triggers debug_assert! (debug only); release builds allow last-write-wins mapping for by_key lookups.
+
+public api surface (impl PhysicsWorldApi for PhysicsWorld)
+- new(cfg: WorldConfig) -> PhysicsWorld
+
+// lifecycle
+- begin_frame(&mut self)
+- push(&mut self, desc: ColliderDesc, motion: Motion) -> FrameId
+- push_circle(&mut self, center: Vec2, radius: f32, vel: Vec2, mask: LayerMask, user_key: Option<ColKey>) -> FrameId
+- push_aabb(&mut self, center: Vec2, half_extents: Vec2, vel: Vec2, mask: LayerMask, user_key: Option<ColKey>) -> FrameId
+- push_point(&mut self, p: Vec2, vel: Vec2, mask: LayerMask, user_key: Option<ColKey>) -> FrameId
+- end_frame(&mut self)
+- generate_events(&mut self)
+- drain_events(&mut self) -> Vec<Event>
+
+// queries (require end_frame; use mutual mask consent against the provided mask)
+- raycast(&self, origin: Vec2, dir: Vec2, mask: LayerMask, max_t: f32) -> Option<(FrameId, SweepHit, Option<ColKey>)>
+  - returns closest hit with 0 <= toi <= max_t (dir must be non-zero).
+  - if origin starts inside shape: toi=0, normal=Vec2::ZERO for AABBs/segments.
+- query_point(&self, p: Vec2, mask: LayerMask) -> Vec<(FrameId, Option<ColKey>)>
+- query_aabb(&self, center: Vec2, half_extents: Vec2, mask: LayerMask) -> Vec<(FrameId, Option<ColKey>)>
+- query_circle(&self, center: Vec2, radius: f32, mask: LayerMask) -> Vec<(FrameId, Option<ColKey>)>
+
+// pairwise checks (same-frame only)
+- overlap_pair(&self, a: FrameId, b: FrameId) -> Option<Overlap>
+- sweep_pair(&self, a: FrameId, b: FrameId) -> Option<SweepHit>
+- overlap_by_key(&self, a: ColKey, b: ColKey) -> Option<Overlap>  // requires unique keys in the frame
+- sweep_by_key(&self, a: ColKey, b: ColKey) -> Option<SweepHit>
+
+debug/perf helpers
+- debug_stats(&self) -> WorldStats
+  - entries: usize, cells: usize, candidate_pairs: usize, unique_pairs: usize
+- timing(&self) -> Option<WorldTiming> (when enable_timing=true)
+  - end_frame_ms, end_frame_aabbs_ms, end_frame_grid_ms,
+    generate_ms, generate_scan_ms, generate_narrowphase_ms, events_emitted
+
+ray/sweep/narrowphase semantics (NarrowphaseApi impl)
+- ray_aabb(origin, dir, aabb_min, aabb_max) -> Option<SweepHit>
+  - slab method; earliest t >= 0; if starting inside -> toi=0, normal=ZERO.
+- ray_circle(origin, dir, center, r) -> Option<SweepHit>
+- line_segment_aabb(a, b, aabb_min, aabb_max) -> Option<SweepHit>
+- line_segment_circle(a, b, center, r) -> Option<SweepHit>
+- overlap_aabb_aabb(c0, h0, c1, h1) -> Option<Overlap>
+- overlap_circle_circle(c0, r0, c1, r1) -> Option<Overlap>
+- overlap_point_aabb(p, c, h) -> bool
+- overlap_point_circle(p, c, r) -> bool
+- sweep_aabb_aabb(c0, h0, v0, c1, h1, v1) -> Option<SweepHit>  // uses vrel = v0 - v1; expects t in [0,1]
+- sweep_circle_aabb(c, r, v, box_c, box_h, box_v) -> Option<SweepHit>
+- sweep_circle_circle(c0, r0, v0, c1, r1, v1) -> Option<SweepHit>
+
+usage sketch (minimal)
+use nobonk::*; use glam::Vec2;
+let mut world = PhysicsWorld::new(WorldConfig { cell_size: 32.0, dt: 1.0/60.0, tighten_swept_aabb: true, enable_overlap_events: true, enable_sweep_events: true, max_events: 2048, enable_timing: false });
+let ball = LayerMask::simple(1, 2);
+let block = LayerMask::simple(2, 1);
+world.begin_frame();
+let a = world.push_circle(Vec2::new(-3.0, 0.0), 0.5, Vec2::new(5.0, 0.0), ball, Some(100));
+let b = world.push_aabb(Vec2::new(0.0, 0.0), Vec2::splat(1.0), Vec2::ZERO, block, Some(200));
+world.end_frame();
+if let Some((id, hit, key)) = world.raycast(Vec2::new(-10.0, 0.0), Vec2::new(1.0, 0.0), ball, 100.0) { /* ... */ }
+world.generate_events();
+for ev in world.drain_events() { match ev.kind { EventKind::Sweep => { /* use ev.sweep.unwrap() */ }, EventKind::Overlap => { /* use ev.overlap.unwrap() */ } } }
+
+notes/quirks
+- coordinates/units are arbitrary; pick consistent world units. dt scales motion in CCD (effective displacement = vel * dt).
+- cell_size influences broadphase: choose close to average collider diameter for perf.
+- queries/events honor mutual mask consent (both sides must allow).
+- points are treated as 0-radius circles in CCD; overlaps return exact containment tests.
+- circle↔aabb overlap info is approximate (zero depth/normal) by design.
+- no persistence: re-add colliders every frame.
+- Option-returning APIs never panic; None indicates miss/no-hit.
+
