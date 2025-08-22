@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/nobonk_logo_small.png" alt="nobonk logo" width="256" />
+  <img src="assets/no_bonk_logo.png" alt="nobonk logo" width="800" />
 </p>
 
 Nobonk is a 2D physics engine that doesn't have physics. It never resolves collisions. Most games want bespoke collision behavior, and fighting general-purpose solvers (hi, Box2D) is no fun. Nobonk only detects interactions and emits events; you decide how to respond.
