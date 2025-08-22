@@ -1,6 +1,10 @@
+# NoBonk
+
 <p align="center">
   <img src="assets/no_bonk_logo.png" alt="nobonk logo" width="800" />
 </p>
+
+## What
 
 Nobonk is a 2D physics engine that doesn't have physics. It does not resolve collisions. It just gives you events that collisions happened.
 You do with that information what you will.
