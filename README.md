@@ -95,7 +95,8 @@ loop {
 
 - `raycast(origin, dir, mask, max_t) -> Option<(FrameId, SweepHit, Option<ColKey>)>`
 - `query_point(p, mask) -> Vec<(FrameId, Option<ColKey>)>`
-- `query_aabb(center, half_extents, mask)` / `query_circle(center, radius, mask)`
+- `query_aabb(center, half_extents, mask)`
+- `query_circle(center, radius, mask)`
 
 ### Overlap
 
