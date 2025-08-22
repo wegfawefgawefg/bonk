@@ -1,4 +1,4 @@
-use bonk::*;
+use nobonk::*;
 use glam::Vec2;
 use std::time::Instant;
 

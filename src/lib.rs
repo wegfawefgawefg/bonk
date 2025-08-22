@@ -1,4 +1,4 @@
-//! bonk: detection-only physics engine (ephemeral world, no resolution)
+//! nobonk: detection-only physics engine (ephemeral world, no resolution)
 
 pub mod types;
 pub mod api;

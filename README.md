@@ -1,10 +1,10 @@
 <p align="center">
-  <img src="assets/bonk_logo_small.png" alt="bonk logo" width="256" />
+  <img src="assets/nobonk_logo_small.png" alt="nobonk logo" width="256" />
 </p>
 
-Bonk is a 2D physics engine that doesn't have physics. It never resolves collisions. Most games want bespoke collision behavior, and fighting general-purpose solvers (hi, Box2D) is no fun. Bonk only detects interactions and emits events; you decide how to respond.
+Nobonk is a 2D physics engine that doesn't have physics. It never resolves collisions. Most games want bespoke collision behavior, and fighting general-purpose solvers (hi, Box2D) is no fun. Nobonk only detects interactions and emits events; you decide how to respond.
 
-bonk — detection-only 2D physics (ephemeral)
+nobonk — detection-only 2D physics (ephemeral)
 
 Overview
 - Ephemeral world: rebuild every frame, no persistent state.
@@ -13,11 +13,11 @@ Overview
 - Layer masks with mutual-consent filtering; optional user keys echoed back.
 
 Install
-- Add to your workspace and `use bonk::*;`.
+- Add to your workspace and `use nobonk::*;`.
 
 Quick Start
 ```
-use bonk::*;
+use nobonk::*;
 use glam::Vec2;
 
 let mut world = PhysicsWorld::new(WorldConfig {

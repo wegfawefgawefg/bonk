@@ -586,7 +586,7 @@ repo/
 
 
 /* -------------------------------------------------------------------------
-FINAL CLEAN SPEC: BONK (GPL-3.0-only)
+FINAL CLEAN SPEC: NOBONK (GPL-3.0-only)
 
 Notes:
 - This spec is implementation-agnostic and matches the simple, single-ephemeral-grid design.
@@ -594,10 +594,10 @@ Notes:
 - License intent for this repository: GPL-3.0-only.
 */
 
-// Crate: bonk-spec (public API)
-// File: crates/bonk-spec/src/lib.rs
+// Crate: nobonk-spec (public API)
+// File: crates/nobonk-spec/src/lib.rs
 // -------------------------------------------------------------------------
-// (Identical API to the spec above; repeated here to be the canonical copy under BONK naming.)
+// (Identical API to the spec above; repeated here to be the canonical copy under NOBONK naming.)
 
 use glam::Vec2;
 
@@ -700,18 +700,18 @@ pub trait NarrowphaseApi {
 pub mod prelude { pub use super::*; }
 
 /* -------------------------------------------------------------------------
-UPDATED REPO PLAN (BONK, GPL-3.0-only, no CI)
+UPDATED REPO PLAN (NOBONK, GPL-3.0-only, no CI)
 
 repo/
 ├─ Cargo.toml                 # workspace
 ├─ .editorconfig
 ├─ .gitignore
 ├─ crates/
-│  ├─ bonk-spec/
+│  ├─ nobonk-spec/
 │  │  ├─ Cargo.toml
 │  │  └─ src/
 │  │     └─ lib.rs
-│  └─ bonk/
+│  └─ nobonk/
 │     ├─ Cargo.toml
 │     └─ src/
 │        ├─ lib.rs
@@ -719,7 +719,7 @@ repo/
 │        ├─ narrowphase.rs
 │        ├─ world.rs
 │        └─ util.rs
-├─ benches/                   # Criterion benches (lives under bonk crate or workspace)
+├─ benches/                   # Criterion benches (lives under nobonk crate or workspace)
 │  ├─ grid_binning.rs
 │  ├─ broadphase_pairs.rs
 │  ├─ narrowphase_shapes.rs
@@ -733,7 +733,7 @@ repo/
 
 // workspace Cargo.toml
 [workspace]
-members = ["crates/bonk-spec", "crates/bonk"]
+members = ["crates/nobonk-spec", "crates/nobonk"]
 resolver = "2"
 
 [workspace.package]
@@ -748,9 +748,9 @@ proptest = "1.5"
 rand = "0.8"
 rand_pcg = "0.3"
 
-// crates/bonk-spec/Cargo.toml
+// crates/nobonk-spec/Cargo.toml
 [package]
-name = "bonk-spec"
+name = "nobonk-spec"
 version = "0.1.0"
 edition = "2021"
 description = "Detection-only physics API spec (ephemeral grid)"
@@ -759,9 +759,9 @@ license = "GPL-3.0-only"
 [dependencies]
 glam = { workspace = true }
 
-// crates/bonk/Cargo.toml
+// crates/nobonk/Cargo.toml
 [package]
-name = "bonk"
+name = "nobonk"
 version = "0.1.0"
 edition = "2021"
 description = "Detection-only physics implementation"
@@ -769,7 +769,7 @@ license = "GPL-3.0-only"
 
 [dependencies]
 glam = { workspace = true }
-bonk-spec = { path = "../bonk-spec" }
+nobonk-spec = { path = "../nobonk-spec" }
 thiserror = { workspace = true }
 
 [dev-dependencies]
@@ -782,13 +782,13 @@ rand_pcg = { workspace = true }
 default = []
 persistent-grid = []
 
-// crates/bonk/src/lib.rs
+// crates/nobonk/src/lib.rs
 pub mod grid; pub mod narrowphase; pub mod world; pub mod util;
-pub use bonk_spec::prelude::*;
+pub use nobonk_spec::prelude::*;
 pub use world::World;
 
 // examples/basic.rs
-use glam::Vec2; use bonk::{World, prelude::*};
+use glam::Vec2; use nobonk::{World, prelude::*};
 fn main() { let mut world = World::new(WorldConfig{cell_size:64.0,dt:1.0/60.0,tighten_swept_aabb:true,enable_overlap_events:true,enable_sweep_events:true,max_events:10_000});
     world.begin_frame();
     world.push_circle(Vec2::new(100.0,200.0),6.0,Vec2::new(240.0,-180.0),LayerMask::simple(1<<1,1<<0),Some(1));
@@ -797,7 +797,7 @@ fn main() { let mut world = World::new(WorldConfig{cell_size:64.0,dt:1.0/60.0,ti
 }
 
 // README Quickstart (updated)
-// cargo run --example basic -p bonk
+// cargo run --example basic -p nobonk
 
 */
 
@@ -810,7 +810,7 @@ Goals
 - Measure throughput for common ops: binning, pair generation, narrowphase, raycast, end-to-end event generation.
 - Catch regressions with stable RNG seeds.
 
-Bench harness layout (under crates/bonk/benches/):
+Bench harness layout (under crates/nobonk/benches/):
   - grid_binning.rs          : vary N∈[1e2..1e6], size distributions, swept vs non-swept.
   - broadphase_pairs.rs      : vary occupancy (avg colliders per cell), uniform vs clustered.
   - narrowphase_shapes.rs    : AABB×AABB, Circle×AABB, Circle×Circle, Point queries.
@@ -832,7 +832,7 @@ use criterion::{criterion_group, criterion_main, Criterion, BatchSize};
 use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg64Mcg;
 use glam::Vec2;
-use bonk::{prelude::*, World};
+use nobonk::{prelude::*, World};
 
 fn gen_colliders(n: usize, seed: u64) -> Vec<(ColliderDesc, Motion)> {
     let mut rng = Pcg64Mcg::seed_from_u64(seed);
@@ -872,11 +872,11 @@ fn bench_grid_build(c: &mut Criterion) {
 criterion_group!(benches, bench_grid_build);
 criterion_main!(benches);
 
-Property tests (crates/bonk/tests/*.rs)
+Property tests (crates/nobonk/tests/*.rs)
 ---------------------------------------
 // proptest: sweep relative velocity equivalence
 // sweep(a,vA,b,vB) == sweep(a,vA-vB,b,0) for finite TOI cases
-use glam::Vec2; use bonk::prelude::*; use proptest::prelude::*;
+use glam::Vec2; use nobonk::prelude::*; use proptest::prelude::*;
 
 proptest!{
   #[test]
@@ -899,8 +899,7 @@ Additional tests to include:
 - Swept bin coverage: moving circle vs thin wall cannot pass through when tighten_swept_aabb=true.
 
 How to run:
-- `cargo test -p bonk`
-- `cargo bench -p bonk`
+- `cargo test -p nobonk`
+- `cargo bench -p nobonk`
 - Compare runs: Criterion stores baselines; use `--baseline` and `--save-baseline`.
 */
-

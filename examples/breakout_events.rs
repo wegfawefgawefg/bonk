@@ -1,5 +1,5 @@
-use glam::Vec2;
 use nobonk::*;
+use glam::Vec2;
 
 fn main() {
     let mut world = PhysicsWorld::new(WorldConfig {
