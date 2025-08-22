@@ -57,11 +57,12 @@ loop {
       /* match on the events or something */ 
     }
 }
+
 ```
 
-## Basic Usage Pattern
+<br>
 
-### Frame loop order
+## Basic Usage Pattern
 
 - `begin_frame()`
 - `push_*` colliders for this frame
@@ -91,6 +92,7 @@ loop {
 - `overlap_by_key(a: ColKey, b: ColKey) -> Option<Overlap>`
 - `sweep_by_key(a: ColKey, b: ColKey) -> Option<SweepHit>`
 
+<br>
 
 ## Design Notes
 
@@ -106,6 +108,8 @@ loop {
 - `cargo run --example bench_narrowphase`
 - `cargo run --example perf_world`
 - `cargo run --example perf_sweep` (CSV)
+
+<br>
 
 ## Quirks
 
