@@ -49,8 +49,20 @@ let blocks_mask = LayerMask::simple(2, 1);
 // your game loop
 loop {
     world.begin_frame();
-    world.push_circle(Vec2::new(-3.0, 0.0), 0.5, Vec2::new(5.0, 0.0), ball_mask, Some(1));
-    world.push_aabb(Vec2::new(0.0, 0.0), Vec2::splat(1.0), Vec2::ZERO, blocks_mask, Some(2));
+    world.push_circle(
+        Vec2::new(-3.0, 0.0), // center
+        0.5, // radius
+        Vec2::new(5.0, 0.0), // velocity
+        ball_mask, // collision mask
+        Some(1) // user key for the ball
+    );
+    world.push_aabb(
+        Vec2::new(0.0, 0.0), // center
+        Vec2::splat(1.0),  // half extents
+        Vec2::ZERO, // velocity
+        blocks_mask, // collision mask
+        Some(2) // user key for the block (use it for looking up the block or back referencing some shit in a hashmap somewhere)
+    );
     world.end_frame();
     world.generate_events();
     for ev in world.drain_events() { 
