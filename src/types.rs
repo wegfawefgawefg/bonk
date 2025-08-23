@@ -1,4 +1,4 @@
-use glam::Vec2;
+use glam::{UVec2, Vec2};
 
 /// User-defined opaque key carried through events/queries (e.g., pack your `VID`).
 pub type ColKey = u64;
@@ -62,26 +62,30 @@ pub struct Motion {
     pub vel: Vec2,
 }
 
+/// Resolution hint attached to hits (tiles & non-tiles).
+#[derive(Copy, Clone, Debug, Default)]
+pub struct ResolutionHint {
+    pub safe_pos: Option<Vec2>,
+    pub start_embedded: bool,
+    pub fully_embedded: bool,
+}
+
 /// Overlap contact result (discrete).
 #[derive(Copy, Clone, Debug)]
 pub struct Overlap {
-    /// Approximate separating normal (may be (0,0) for degenerate cases).
     pub normal: Vec2,
-    /// Penetration depth (≥ 0).
     pub depth: f32,
-    /// A representative contact point (approx for AABBs).
     pub contact: Vec2,
+    pub hint: ResolutionHint,
 }
 
 /// Sweep (time-of-impact) result for continuous detection.
 #[derive(Copy, Clone, Debug)]
 pub struct SweepHit {
-    /// Fraction in [0,1] where first impact occurs within the frame.
     pub toi: f32,
-    /// Normal at impact (points from B into A).
     pub normal: Vec2,
-    /// Representative impact/contact point.
     pub contact: Vec2,
+    pub hint: ResolutionHint,
 }
 
 /// Event discriminator.
@@ -95,12 +99,30 @@ pub enum EventKind {
 #[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct FrameId(pub u32);
 
+/// Opaque handle to a registered tilemap layer.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct TileMapRef(pub u32);
+
+/// Identifies a specific tile cell within a map.
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct TileRef {
+    pub map: TileMapRef,
+    pub cell_xy: UVec2,
+}
+
+/// Reference to an event/query participant (collider or tile).
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub enum BodyRef {
+    Collider(FrameId),
+    Tile(TileRef),
+}
+
 /// Collision event emitted after generation.
 #[derive(Copy, Clone, Debug)]
 pub struct Event {
     pub kind: EventKind,
-    pub a: FrameId,
-    pub b: FrameId,
+    pub a: BodyRef,
+    pub b: BodyRef,
     pub a_key: Option<ColKey>,
     pub b_key: Option<ColKey>,
     pub overlap: Option<Overlap>,
@@ -110,20 +132,29 @@ pub struct Event {
 /// World-level configuration for the ephemeral detector.
 #[derive(Clone, Debug)]
 pub struct WorldConfig {
-    /// Grid cell size in world units (typ. 32–64 for Breakout tiles).
     pub cell_size: f32,
-    /// Simulation step used when interpreting velocities (e.g., 1/60).
     pub dt: f32,
-    /// If true, dynamic binning uses swept AABB over `center .. center + vel*dt`.
     pub tighten_swept_aabb: bool,
-    /// Emit discrete overlap events for zero-relative-velocity pairs.
     pub enable_overlap_events: bool,
-    /// Emit first-TOI sweep events when relative velocity is non-zero.
     pub enable_sweep_events: bool,
-    /// Maximum number of events to emit per frame; extra are dropped.
     pub max_events: usize,
-    /// Enable internal timing instrumentation (adds small overhead when true).
     pub enable_timing: bool,
+    /// Epsilon used when computing safe_pos for tile hits.
+    pub tile_eps: f32,
+    /// If true, require mutual consent for events/queries (colliders and tiles).
+    pub require_mutual_consent: bool,
+}
+
+/// Description of a tilemap to attach to the world.
+#[derive(Clone, Debug)]
+pub struct TileMapDesc<'a> {
+    pub origin: Vec2,
+    pub cell: f32,
+    pub width: u32,
+    pub height: u32,
+    pub solids: &'a [u8],
+    pub mask: LayerMask,
+    pub user_key: Option<ColKey>,
 }
 
 /// Debug/performance statistics for a built frame.

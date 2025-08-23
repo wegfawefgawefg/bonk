@@ -19,6 +19,9 @@ pub struct PhysicsWorld {
     // Uniform grid: cell coord -> list of indices into `entries`
     grid: HashMap<(i32, i32), Vec<usize>>,
 
+    // Tilemaps
+    tilemaps: Vec<TileMap>,
+
     // Event buffer for this frame
     events: Vec<Event>,
 
@@ -31,6 +34,17 @@ struct Entry {
     motion: Motion,
 }
 
+#[derive(Clone)]
+struct TileMap {
+    origin: Vec2,
+    cell: f32,
+    width: u32,
+    height: u32,
+    solids: Vec<u8>,
+    mask: LayerMask,
+    user_key: Option<ColKey>,
+}
+
 impl PhysicsWorldApi for PhysicsWorld {
     fn new(cfg: WorldConfig) -> Self {
         Self {
@@ -40,6 +54,7 @@ impl PhysicsWorldApi for PhysicsWorld {
             aabbs: Vec::new(),
             key_to_id: HashMap::new(),
             grid: HashMap::new(),
+            tilemaps: Vec::new(),
             events: Vec::new(),
             last_timing: None,
         }
@@ -205,8 +220,8 @@ impl PhysicsWorldApi for PhysicsWorld {
                     };
                     let ea = &self.entries[a];
                     let eb = &self.entries[b];
-                    // Mask mutual consent
-                    if !(ea.desc.mask.allows(eb.desc.mask) && eb.desc.mask.allows(ea.desc.mask)) {
+                    // Mask consent (possibly mutual based on config)
+                    if !self.allows_pair(ea.desc.mask, eb.desc.mask) {
                         continue;
                     }
 
@@ -214,37 +229,26 @@ impl PhysicsWorldApi for PhysicsWorld {
                     let dynamic = rel.length_squared() > 1e-12;
 
                     if dynamic && self.cfg.enable_sweep_events {
-                        if let Some(sweep) = self.sweep_pair_idx(a, b) {
+                        if let Some(mut sweep) = self.sweep_pair_idx(a, b) {
+                            sweep.hint = ResolutionHint::default();
                             let ev = Event {
                                 kind: crate::types::EventKind::Sweep,
-                                a: FrameId(a as u32),
-                                b: FrameId(b as u32),
+                                a: BodyRef::Collider(FrameId(a as u32)),
+                                b: BodyRef::Collider(FrameId(b as u32)),
                                 a_key: ea.desc.user_key,
                                 b_key: eb.desc.user_key,
                                 overlap: None,
                                 sweep: Some(sweep),
                             };
                             push_event(ev, &mut self.events, self.cfg.max_events);
-                        } else if self.cfg.enable_overlap_events {
-                            if let Some(ov) = self.overlap_pair_idx(a, b) {
-                                let ev = Event {
-                                    kind: crate::types::EventKind::Overlap,
-                                    a: FrameId(a as u32),
-                                    b: FrameId(b as u32),
-                                    a_key: ea.desc.user_key,
-                                    b_key: eb.desc.user_key,
-                                    overlap: Some(ov),
-                                    sweep: None,
-                                };
-                                push_event(ev, &mut self.events, self.cfg.max_events);
-                            }
-                        }
-                    } else if self.cfg.enable_overlap_events {
-                        if let Some(ov) = self.overlap_pair_idx(a, b) {
+                        } else if self.cfg.enable_overlap_events
+                            && let Some(mut ov) = self.overlap_pair_idx(a, b)
+                        {
+                            ov.hint = ResolutionHint::default();
                             let ev = Event {
                                 kind: crate::types::EventKind::Overlap,
-                                a: FrameId(a as u32),
-                                b: FrameId(b as u32),
+                                a: BodyRef::Collider(FrameId(a as u32)),
+                                b: BodyRef::Collider(FrameId(b as u32)),
                                 a_key: ea.desc.user_key,
                                 b_key: eb.desc.user_key,
                                 overlap: Some(ov),
@@ -252,6 +256,20 @@ impl PhysicsWorldApi for PhysicsWorld {
                             };
                             push_event(ev, &mut self.events, self.cfg.max_events);
                         }
+                    } else if self.cfg.enable_overlap_events
+                        && let Some(mut ov) = self.overlap_pair_idx(a, b)
+                    {
+                        ov.hint = ResolutionHint::default();
+                        let ev = Event {
+                            kind: crate::types::EventKind::Overlap,
+                            a: BodyRef::Collider(FrameId(a as u32)),
+                            b: BodyRef::Collider(FrameId(b as u32)),
+                            a_key: ea.desc.user_key,
+                            b_key: eb.desc.user_key,
+                            overlap: Some(ov),
+                            sweep: None,
+                        };
+                        push_event(ev, &mut self.events, self.cfg.max_events);
                     }
                     if let (Some(t_np0), Some(timing)) = (t_np0, self.last_timing.as_mut()) {
                         timing.generate_narrowphase_ms += t_np0.elapsed().as_secs_f64() * 1000.0;
@@ -266,6 +284,99 @@ impl PhysicsWorldApi for PhysicsWorld {
             if let Some(timing) = self.last_timing.as_mut() {
                 timing.generate_scan_ms =
                     t_scan0.elapsed().as_secs_f64() * 1000.0 - timing.generate_narrowphase_ms;
+            }
+        }
+
+        // Phase 2: collider ↔ tile events
+        if self.events.len() < self.cfg.max_events {
+            for (i, e) in self.entries.iter().enumerate() {
+                let he = match e.desc.kind {
+                    ColliderKind::Aabb { half_extents } => half_extents,
+                    ColliderKind::Circle { radius } => Vec2::splat(radius),
+                    ColliderKind::Point => Vec2::ZERO,
+                };
+                let mask_a = e.desc.mask;
+                let v = e.motion.vel;
+                let mut emitted = false;
+                if v.length_squared() > 1e-12
+                    && self.cfg.enable_sweep_events
+                    && let Some((tref, mut hit, key_b)) =
+                        self.sweep_shape_tiles(e.desc.center, he, v, mask_a)
+                {
+                    hit.hint.start_embedded = false;
+                    let ev = Event {
+                        kind: EventKind::Sweep,
+                        a: BodyRef::Collider(FrameId(i as u32)),
+                        b: BodyRef::Tile(tref),
+                        a_key: e.desc.user_key,
+                        b_key: key_b,
+                        overlap: None,
+                        sweep: Some(hit),
+                    };
+                    push_event(ev, &mut self.events, self.cfg.max_events);
+                    emitted = true;
+                }
+                if !emitted && self.cfg.enable_overlap_events {
+                    // Check start embedded
+                    for m in &self.tilemaps {
+                        if !self.allows_pair(mask_a, m.mask) {
+                            continue;
+                        }
+                        if let Some(tref) = self.any_tile_overlap_at(m, e.desc.center, he) {
+                            // Build overlap with pushout hint
+                            let cell = m.cell.max(1e-5);
+                            let tile_min = m.origin
+                                + Vec2::new(
+                                    tref.cell_xy.x as f32 * cell,
+                                    tref.cell_xy.y as f32 * cell,
+                                );
+                            let (normal, depth, contact) = if he == Vec2::ZERO {
+                                crate::narrowphase::Narrowphase::circle_tile_pushout(
+                                    e.desc.center,
+                                    0.0,
+                                    tile_min,
+                                    cell,
+                                )
+                            } else if he.x == he.y {
+                                // treat as circle for simplicity when square
+                                crate::narrowphase::Narrowphase::circle_tile_pushout(
+                                    e.desc.center,
+                                    he.x,
+                                    tile_min,
+                                    cell,
+                                )
+                            } else {
+                                crate::narrowphase::Narrowphase::aabb_tile_pushout(
+                                    e.desc.center,
+                                    he,
+                                    tile_min,
+                                    cell,
+                                )
+                            };
+                            let mut ov = Overlap {
+                                normal,
+                                depth,
+                                contact,
+                                hint: ResolutionHint::default(),
+                            };
+                            ov.hint.start_embedded = true;
+                            let ev = Event {
+                                kind: EventKind::Overlap,
+                                a: BodyRef::Collider(FrameId(i as u32)),
+                                b: BodyRef::Tile(tref),
+                                a_key: e.desc.user_key,
+                                b_key: m.user_key,
+                                overlap: Some(ov),
+                                sweep: None,
+                            };
+                            push_event(ev, &mut self.events, self.cfg.max_events);
+                            break;
+                        }
+                    }
+                }
+                if self.events.len() >= self.cfg.max_events {
+                    break;
+                }
             }
         }
         if let Some(t_all) = t_all {
@@ -283,6 +394,45 @@ impl PhysicsWorldApi for PhysicsWorld {
         let out = self.events.clone();
         self.events.clear();
         out
+    }
+
+    // --- Tilemap lifecycle --------------------------------------------------
+    fn attach_tilemap(&mut self, desc: TileMapDesc) -> TileMapRef {
+        let map = TileMap {
+            origin: desc.origin,
+            cell: desc.cell,
+            width: desc.width,
+            height: desc.height,
+            solids: desc.solids.to_vec(),
+            mask: desc.mask,
+            user_key: desc.user_key,
+        };
+        self.tilemaps.push(map);
+        TileMapRef((self.tilemaps.len() - 1) as u32)
+    }
+
+    fn update_tiles(&mut self, map: TileMapRef, changed_rect: (u32, u32, u32, u32), data: &[u8]) {
+        if let Some(m) = self.tilemaps.get_mut(map.0 as usize) {
+            let (x, y, w, h) = changed_rect;
+            assert_eq!((w * h) as usize, data.len());
+            for row in 0..h {
+                let dst_y = y + row;
+                if dst_y >= m.height {
+                    break;
+                }
+                let dst_off = (dst_y * m.width + x) as usize;
+                let src_off = (row * w) as usize;
+                let len = w.min(m.width - x) as usize;
+                m.solids[dst_off..dst_off + len].copy_from_slice(&data[src_off..src_off + len]);
+            }
+        }
+    }
+
+    fn detach_tilemap(&mut self, map: TileMapRef) {
+        let idx = map.0 as usize;
+        if idx < self.tilemaps.len() {
+            self.tilemaps.remove(idx);
+        }
     }
 
     fn raycast(
@@ -383,10 +533,11 @@ impl PhysicsWorldApi for PhysicsWorld {
                             0.0,
                         ),
                     };
-                    if let Some(h) = hit {
+                    if let Some(mut h) = hit {
                         if h.toi < 0.0 || h.toi > max_t {
                             continue;
                         }
+                        h.hint = ResolutionHint::default();
                         match &mut best {
                             Some((_, bh)) if h.toi >= bh.toi => {}
                             _ => best = Some((idx, h)),
@@ -408,6 +559,201 @@ impl PhysicsWorldApi for PhysicsWorld {
         }
 
         best.map(|(idx, h)| (FrameId(idx as u32), h, self.entries[idx].desc.user_key))
+    }
+
+    // --- Unified queries (colliders + tiles) --------------------------------
+    fn raycast_all(
+        &self,
+        origin: Vec2,
+        dir: Vec2,
+        mask: LayerMask,
+        max_t: f32,
+    ) -> Option<(BodyRef, SweepHit, Option<ColKey>)> {
+        let mut best: Option<(BodyRef, SweepHit, Option<ColKey>)> = None;
+        if let Some((id, hit, key)) = self.raycast(origin, dir, mask, max_t) {
+            best = Some((BodyRef::Collider(id), hit, key));
+        }
+        if let Some((tref, hit, key)) = self.raycast_tiles_internal(origin, dir, max_t, mask) {
+            match &best {
+                Some((_, bh, _)) if hit.toi >= bh.toi => {}
+                _ => best = Some((BodyRef::Tile(tref), hit, key)),
+            }
+        }
+        best
+    }
+
+    fn query_point_all(&self, p: Vec2, mask: LayerMask) -> Vec<(BodyRef, Option<ColKey>)> {
+        let mut out: Vec<(BodyRef, Option<ColKey>)> = Vec::new();
+        for (id, key) in self.query_point(p, mask) {
+            out.push((BodyRef::Collider(id), key));
+        }
+        for (mi, m) in self.tilemaps.iter().enumerate() {
+            if !self.allows_pair(mask, m.mask) {
+                continue;
+            }
+            let local = p - m.origin;
+            let cell = m.cell.max(1e-5);
+            let cx = (local.x / cell).floor() as i32;
+            let cy = (local.y / cell).floor() as i32;
+            if cx >= 0 && cy >= 0 && (cx as u32) < m.width && (cy as u32) < m.height {
+                let idx = cy as u32 * m.width + cx as u32;
+                if m.solids[idx as usize] != 0 {
+                    out.push((
+                        BodyRef::Tile(TileRef {
+                            map: TileMapRef(mi as u32),
+                            cell_xy: glam::UVec2::new(cx as u32, cy as u32),
+                        }),
+                        m.user_key,
+                    ));
+                }
+            }
+        }
+        out
+    }
+
+    fn query_aabb_all(
+        &self,
+        center: Vec2,
+        half_extents: Vec2,
+        mask: LayerMask,
+    ) -> Vec<(BodyRef, Option<ColKey>)> {
+        let mut out: Vec<(BodyRef, Option<ColKey>)> = Vec::new();
+        for (id, key) in self.query_aabb(center, half_extents, mask) {
+            out.push((BodyRef::Collider(id), key));
+        }
+        for (mi, m) in self.tilemaps.iter().enumerate() {
+            if !self.allows_pair(mask, m.mask) {
+                continue;
+            }
+            let cell = m.cell.max(1e-5);
+            let min = center - half_extents - m.origin;
+            let max = center + half_extents - m.origin;
+            let ix0 = (min.x / cell).floor() as i32;
+            let iy0 = (min.y / cell).floor() as i32;
+            let ix1 = (max.x / cell).floor() as i32;
+            let iy1 = (max.y / cell).floor() as i32;
+            for iy in iy0..=iy1 {
+                for ix in ix0..=ix1 {
+                    if ix < 0 || iy < 0 {
+                        continue;
+                    }
+                    let (ux, uy) = (ix as u32, iy as u32);
+                    if ux >= m.width || uy >= m.height {
+                        continue;
+                    }
+                    let idx = (uy * m.width + ux) as usize;
+                    if m.solids[idx] == 0 {
+                        continue;
+                    }
+                    let tile_min = m.origin + Vec2::new(ix as f32 * cell, iy as f32 * cell);
+                    let tile_c = tile_min + Vec2::splat(cell * 0.5);
+                    let tile_h = Vec2::splat(cell * 0.5);
+                    if crate::narrowphase::Narrowphase::overlap_aabb_aabb(
+                        center,
+                        half_extents,
+                        tile_c,
+                        tile_h,
+                    )
+                    .is_some()
+                    {
+                        out.push((
+                            BodyRef::Tile(TileRef {
+                                map: TileMapRef(mi as u32),
+                                cell_xy: glam::UVec2::new(ux, uy),
+                            }),
+                            m.user_key,
+                        ));
+                    }
+                }
+            }
+        }
+        out
+    }
+
+    fn query_circle_all(
+        &self,
+        center: Vec2,
+        radius: f32,
+        mask: LayerMask,
+    ) -> Vec<(BodyRef, Option<ColKey>)> {
+        let mut out: Vec<(BodyRef, Option<ColKey>)> = Vec::new();
+        for (id, key) in self.query_circle(center, radius, mask) {
+            out.push((BodyRef::Collider(id), key));
+        }
+        for (mi, m) in self.tilemaps.iter().enumerate() {
+            if !self.allows_pair(mask, m.mask) {
+                continue;
+            }
+            let cell = m.cell.max(1e-5);
+            let min = center - Vec2::splat(radius) - m.origin;
+            let max = center + Vec2::splat(radius) - m.origin;
+            let ix0 = (min.x / cell).floor() as i32;
+            let iy0 = (min.y / cell).floor() as i32;
+            let ix1 = (max.x / cell).floor() as i32;
+            let iy1 = (max.y / cell).floor() as i32;
+            for iy in iy0..=iy1 {
+                for ix in ix0..=ix1 {
+                    if ix < 0 || iy < 0 {
+                        continue;
+                    }
+                    let (ux, uy) = (ix as u32, iy as u32);
+                    if ux >= m.width || uy >= m.height {
+                        continue;
+                    }
+                    let idx = (uy * m.width + ux) as usize;
+                    if m.solids[idx] == 0 {
+                        continue;
+                    }
+                    let tile_min = m.origin + Vec2::new(ix as f32 * cell, iy as f32 * cell);
+                    let (_n, depth, _contact) =
+                        crate::narrowphase::Narrowphase::circle_tile_pushout(
+                            center, radius, tile_min, cell,
+                        );
+                    if depth >= 0.0 {
+                        // include touching
+                        out.push((
+                            BodyRef::Tile(TileRef {
+                                map: TileMapRef(mi as u32),
+                                cell_xy: glam::UVec2::new(ux, uy),
+                            }),
+                            m.user_key,
+                        ));
+                    }
+                }
+            }
+        }
+        out
+    }
+
+    // --- Tile-only fast paths ----------------------------------------------
+    fn raycast_tiles(
+        &self,
+        origin: Vec2,
+        dir: Vec2,
+        max_t: f32,
+        mask: LayerMask,
+    ) -> Option<(TileRef, SweepHit, Option<ColKey>)> {
+        self.raycast_tiles_internal(origin, dir, max_t, mask)
+    }
+
+    fn sweep_aabb_tiles(
+        &self,
+        center: Vec2,
+        half_extents: Vec2,
+        vel: Vec2,
+        mask: LayerMask,
+    ) -> Option<(TileRef, SweepHit, Option<ColKey>)> {
+        self.sweep_shape_tiles(center, half_extents, vel, mask)
+    }
+
+    fn sweep_circle_tiles(
+        &self,
+        center: Vec2,
+        radius: f32,
+        vel: Vec2,
+        mask: LayerMask,
+    ) -> Option<(TileRef, SweepHit, Option<ColKey>)> {
+        self.sweep_shape_tiles(center, Vec2::splat(radius), vel, mask)
     }
 
     fn query_point(&self, p: Vec2, mask: LayerMask) -> Vec<(FrameId, Option<ColKey>)> {
@@ -667,6 +1013,7 @@ impl PhysicsWorld {
                         normal: Vec2::ZERO,
                         depth: 0.0,
                         contact: a.desc.center,
+                        hint: ResolutionHint::default(),
                     })
                 } else {
                     None
@@ -682,6 +1029,7 @@ impl PhysicsWorld {
                         normal: Vec2::ZERO,
                         depth: 0.0,
                         contact: b.desc.center,
+                        hint: ResolutionHint::default(),
                     })
                 } else {
                     None
@@ -693,6 +1041,7 @@ impl PhysicsWorld {
                         normal: Vec2::ZERO,
                         depth: 0.0,
                         contact: a.desc.center,
+                        hint: ResolutionHint::default(),
                     })
                 } else {
                     None
@@ -704,6 +1053,7 @@ impl PhysicsWorld {
                         normal: Vec2::ZERO,
                         depth: 0.0,
                         contact: b.desc.center,
+                        hint: ResolutionHint::default(),
                     })
                 } else {
                     None
@@ -721,6 +1071,7 @@ impl PhysicsWorld {
                         normal: Vec2::ZERO,
                         depth: 0.0,
                         contact: a.desc.center,
+                        hint: ResolutionHint::default(),
                     })
                 } else {
                     None
@@ -737,6 +1088,7 @@ impl PhysicsWorld {
                         normal: Vec2::ZERO,
                         depth: 0.0,
                         contact: b.desc.center,
+                        hint: ResolutionHint::default(),
                     })
                 } else {
                     None
@@ -748,6 +1100,7 @@ impl PhysicsWorld {
                         normal: Vec2::ZERO,
                         depth: 0.0,
                         contact: a.desc.center,
+                        hint: ResolutionHint::default(),
                     })
                 } else {
                     None
@@ -804,6 +1157,7 @@ impl PhysicsWorld {
                     toi: hit.toi,
                     normal: -hit.normal,
                     contact: hit.contact,
+                    hint: ResolutionHint::default(),
                 })
             }
             (ColliderKind::Point, ColliderKind::Aabb { .. }) => Narrowphase::sweep_circle_aabb(
@@ -827,6 +1181,7 @@ impl PhysicsWorld {
                     toi: hit.toi,
                     normal: -hit.normal,
                     contact: hit.contact,
+                    hint: ResolutionHint::default(),
                 })
             }
             (ColliderKind::Point, ColliderKind::Circle { radius: r }) => {
@@ -852,6 +1207,7 @@ impl PhysicsWorld {
                     toi: hit.toi,
                     normal: -hit.normal,
                     contact: hit.contact,
+                    hint: ResolutionHint::default(),
                 })
             }
             (ColliderKind::Point, ColliderKind::Point) => None,
@@ -891,6 +1247,253 @@ impl PhysicsWorld {
     pub fn timing(&self) -> Option<WorldTiming> {
         self.last_timing
     }
+
+    fn allows_pair(&self, a: LayerMask, b: LayerMask) -> bool {
+        if self.cfg.require_mutual_consent {
+            a.allows(b) && b.allows(a)
+        } else {
+            a.allows(b) || b.allows(a)
+        }
+    }
+
+    fn tile_at(m: &TileMap, ix: i32, iy: i32) -> Option<usize> {
+        if ix < 0 || iy < 0 {
+            return None;
+        }
+        let ux = ix as u32;
+        let uy = iy as u32;
+        if ux >= m.width || uy >= m.height {
+            return None;
+        }
+        Some((uy * m.width + ux) as usize)
+    }
+
+    fn any_tile_overlap_at(&self, m: &TileMap, center: Vec2, he: Vec2) -> Option<TileRef> {
+        let cell = m.cell.max(1e-5);
+        let min = center - he - m.origin;
+        let max = center + he - m.origin;
+        let ix0 = (min.x / cell).floor() as i32;
+        let iy0 = (min.y / cell).floor() as i32;
+        let ix1 = (max.x / cell).floor() as i32;
+        let iy1 = (max.y / cell).floor() as i32;
+        for iy in iy0..=iy1 {
+            for ix in ix0..=ix1 {
+                if let Some(idx) = Self::tile_at(m, ix, iy)
+                    && m.solids[idx] != 0
+                {
+                    let tile_min = m.origin + Vec2::new(ix as f32 * cell, iy as f32 * cell);
+                    // quick overlap check: AABB vs tile AABB
+                    let tile_c = tile_min + Vec2::splat(cell * 0.5);
+                    let tile_h = Vec2::splat(cell * 0.5);
+                    if crate::narrowphase::Narrowphase::overlap_aabb_aabb(
+                        center, he, tile_c, tile_h,
+                    )
+                    .is_some()
+                    {
+                        return Some(TileRef {
+                            map: TileMapRef(0),
+                            cell_xy: glam::UVec2::new(ix as u32, iy as u32),
+                        });
+                    }
+                }
+            }
+        }
+        None
+    }
+
+    fn sweep_shape_tiles(
+        &self,
+        center: Vec2,
+        he: Vec2,
+        vel: Vec2,
+        mask: LayerMask,
+    ) -> Option<(TileRef, SweepHit, Option<ColKey>)> {
+        let mut best: Option<(TileRef, SweepHit, Option<ColKey>)> = None;
+        let eps = self.cfg.tile_eps.max(1e-6);
+        let p0 = center;
+        let d = vel * self.cfg.dt;
+        for (mi, m) in self.tilemaps.iter().enumerate() {
+            if !self.allows_pair(mask, m.mask) {
+                continue;
+            }
+            let cell = m.cell.max(1e-5);
+            let len = d.length();
+            let steps_f = ((len / cell).ceil().max(1.0)) * 2.0;
+            let steps = steps_f as i32;
+            let mut t_prev = 0.0f32;
+            let mut prev_free = p0;
+            let tref_hit: Option<TileRef>;
+            for i in 1..=steps {
+                let t = (i as f32 / steps_f).min(1.0);
+                let p = p0 + d * t;
+                if let Some(tref) = self.any_tile_overlap_at(m, p, he) {
+                    tref_hit = Some(tref);
+                    // binary search refine
+                    let mut lo = t_prev;
+                    let mut hi = t;
+                    for _ in 0..14 {
+                        let mid = 0.5 * (lo + hi);
+                        let q = p0 + d * mid;
+                        if self.any_tile_overlap_at(m, q, he).is_some() {
+                            hi = mid;
+                        } else {
+                            lo = mid;
+                            prev_free = q;
+                        }
+                    }
+                    let toi = hi;
+                    let p_hit = p0 + d * toi;
+                    let tr = tref_hit.unwrap();
+                    let tile_min = m.origin
+                        + Vec2::new(tr.cell_xy.x as f32 * cell, tr.cell_xy.y as f32 * cell);
+                    let (n, _depth, contact) = crate::narrowphase::Narrowphase::aabb_tile_pushout(
+                        p_hit, he, tile_min, cell,
+                    );
+                    let mut hit = SweepHit {
+                        toi,
+                        normal: if n.length_squared() > 0.0 {
+                            n
+                        } else {
+                            (p_hit - prev_free).normalize_or_zero()
+                        },
+                        contact,
+                        hint: ResolutionHint::default(),
+                    };
+                    hit.hint.safe_pos = Some(p0 + d * (toi - eps));
+                    best = Some((
+                        TileRef {
+                            map: TileMapRef(mi as u32),
+                            cell_xy: tr.cell_xy,
+                        },
+                        hit,
+                        m.user_key,
+                    ));
+                    break;
+                } else {
+                    t_prev = t;
+                    prev_free = p;
+                }
+            }
+            if best.is_some() {
+                break;
+            }
+        }
+        best
+    }
+
+    // Tile raycast helper
+    fn raycast_tiles_internal(
+        &self,
+        origin: Vec2,
+        dir: Vec2,
+        max_t: f32,
+        mask: LayerMask,
+    ) -> Option<(TileRef, SweepHit, Option<ColKey>)> {
+        if dir.length_squared() == 0.0 {
+            return None;
+        }
+        let mut best: Option<(TileRef, SweepHit, Option<ColKey>)> = None;
+        let eps = self.cfg.tile_eps.max(1e-6);
+        for (mi, m) in self.tilemaps.iter().enumerate() {
+            let cell = m.cell.max(1e-5);
+            let local = origin - m.origin;
+            let mut cx = (local.x / cell).floor() as i32;
+            let mut cy = (local.y / cell).floor() as i32;
+            let step_x = if dir.x > 0.0 {
+                1
+            } else if dir.x < 0.0 {
+                -1
+            } else {
+                0
+            };
+            let step_y = if dir.y > 0.0 {
+                1
+            } else if dir.y < 0.0 {
+                -1
+            } else {
+                0
+            };
+            let next_boundary = |c: i32, step: i32| -> f32 {
+                if step > 0 {
+                    (c as f32 + 1.0) * cell
+                } else {
+                    c as f32 * cell
+                }
+            };
+            let mut t_max_x = if step_x != 0 {
+                let nb = m.origin.x + next_boundary(cx, step_x);
+                (nb - origin.x) / dir.x
+            } else {
+                f32::INFINITY
+            };
+            let mut t_max_y = if step_y != 0 {
+                let nb = m.origin.y + next_boundary(cy, step_y);
+                (nb - origin.y) / dir.y
+            } else {
+                f32::INFINITY
+            };
+            let t_delta_x = if step_x != 0 {
+                cell / dir.x.abs()
+            } else {
+                f32::INFINITY
+            };
+            let t_delta_y = if step_y != 0 {
+                cell / dir.y.abs()
+            } else {
+                f32::INFINITY
+            };
+            let mut t_curr = 0.0f32;
+            for _ in 0..20_000 {
+                if t_curr > max_t {
+                    break;
+                }
+                if cx >= 0 && cy >= 0 && (cx as u32) < m.width && (cy as u32) < m.height {
+                    let idx = cy as u32 * m.width + cx as u32;
+                    if m.solids[idx as usize] != 0 && self.allows_pair(mask, m.mask) {
+                        let use_x = t_max_x < t_max_y;
+                        let toi = if use_x { t_max_x } else { t_max_y };
+                        if toi >= 0.0 && toi <= max_t {
+                            let contact = origin + dir * toi;
+                            let normal = if use_x {
+                                Vec2::new(-(step_x as f32), 0.0)
+                            } else {
+                                Vec2::new(0.0, -(step_y as f32))
+                            };
+                            let mut hit = SweepHit {
+                                toi,
+                                normal,
+                                contact,
+                                hint: ResolutionHint::default(),
+                            };
+                            hit.hint.safe_pos = Some(origin + dir * (toi - eps));
+                            let tr = TileRef {
+                                map: TileMapRef(mi as u32),
+                                cell_xy: glam::UVec2::new(cx as u32, cy as u32),
+                            };
+                            let key = m.user_key;
+                            match &best {
+                                Some((_, bh, _)) if hit.toi >= bh.toi => {}
+                                _ => best = Some((tr, hit, key)),
+                            }
+                        }
+                    }
+                }
+                if t_max_x < t_max_y {
+                    cx += step_x;
+                    t_curr = t_max_x;
+                    t_max_x += t_delta_x;
+                } else {
+                    cy += step_y;
+                    t_curr = t_max_y;
+                    t_max_y += t_delta_y;
+                }
+                if t_curr > max_t {
+                    break;
+                }
+            }
+        }
+        best
+    }
 }
 
 #[cfg(test)]
@@ -906,6 +1509,8 @@ mod tests {
             enable_sweep_events: true,
             max_events: 1024,
             enable_timing: false,
+            tile_eps: 1e-4,
+            require_mutual_consent: true,
         }
     }
 
@@ -977,8 +1582,14 @@ mod tests {
         assert_eq!(evs.len(), 1);
         let ev = evs[0];
         assert!(matches!(ev.kind, crate::types::EventKind::Sweep));
-        assert_eq!(ev.a, a);
-        assert_eq!(ev.b, b);
+        match ev.a {
+            BodyRef::Collider(id) => assert_eq!(id, a),
+            _ => panic!("expected collider A"),
+        }
+        match ev.b {
+            BodyRef::Collider(id) => assert_eq!(id, b),
+            _ => panic!("expected collider B"),
+        }
         assert!(ev.sweep.is_some());
         // Drained; buffer should be empty now
         assert!(w.drain_events().is_empty());
@@ -1039,5 +1650,344 @@ mod tests {
         assert_eq!(hit.0, id_a);
         let hit2 = w.raycast(Vec2::new(0.0, 0.0), Vec2::new(-1.0, 0.0), mask, 10.0);
         assert!(hit2.is_none());
+    }
+
+    // --- Tile tests ---------------------------------------------------------
+
+    fn simple_map_bits() -> Vec<u8> {
+        // 3x1 with middle solid
+        vec![0, 1, 0]
+    }
+
+    #[test]
+    fn test_tile_raycast_basic() {
+        let mut w = PhysicsWorld::new(cfg());
+        let map = TileMapDesc {
+            origin: Vec2::new(0.0, 0.0),
+            cell: 1.0,
+            width: 3,
+            height: 1,
+            solids: &simple_map_bits(),
+            mask: LayerMask::simple(2, 1),
+            user_key: Some(77),
+        };
+        w.attach_tilemap(map);
+        // ray from left hits middle cell at x=1 boundary
+        let origin = Vec2::new(-0.5, 0.5);
+        let dir = Vec2::new(1.0, 0.0);
+        let mask = LayerMask::simple(1, 2);
+        let hit = w.raycast_all(origin, dir, mask, 10.0).unwrap();
+        match hit.0 {
+            BodyRef::Tile(t) => {
+                assert_eq!(t.cell_xy.x, 1);
+            }
+            _ => panic!("expected tile hit"),
+        }
+    }
+
+    #[test]
+    fn test_query_aabb_all_tiles() {
+        let mut w = PhysicsWorld::new(cfg());
+        let map = TileMapDesc {
+            origin: Vec2::new(0.0, 0.0),
+            cell: 1.0,
+            width: 3,
+            height: 1,
+            solids: &simple_map_bits(),
+            mask: LayerMask::simple(2, 1),
+            user_key: None,
+        };
+        w.attach_tilemap(map);
+        let res = w.query_aabb_all(
+            Vec2::new(1.0, 0.5),
+            Vec2::splat(0.6),
+            LayerMask::simple(1, 2),
+        );
+        assert!(
+            res.iter().any(
+                |(b, _)| matches!(b, BodyRef::Tile(TileRef { cell_xy, .. }) if cell_xy.x == 1)
+            )
+        );
+    }
+
+    #[test]
+    fn test_sweep_aabb_tiles_basic() {
+        let mut w = PhysicsWorld::new(cfg());
+        let solids = vec![0, 1, 0, 0, 1, 0, 0, 1, 0]; // 3x3 column in middle
+        let map = TileMapDesc {
+            origin: Vec2::new(0.0, 0.0),
+            cell: 1.0,
+            width: 3,
+            height: 3,
+            solids: &solids,
+            mask: LayerMask::simple(2, 1),
+            user_key: None,
+        };
+        w.attach_tilemap(map);
+        let start = Vec2::new(0.2, 1.5);
+        let he = Vec2::splat(0.3);
+        let vel = Vec2::new(2.0, 0.0);
+        let res = w
+            .sweep_aabb_tiles(start, he, vel, LayerMask::simple(1, 2))
+            .unwrap();
+        assert!(res.1.toi > 0.0 && res.1.toi <= 1.0);
+        // normal should be -X (hitting vertical face)
+        assert!(res.1.normal.x < -0.5);
+        assert!(res.1.hint.safe_pos.is_some());
+    }
+
+    #[test]
+    fn test_tile_raycast_monotonicity() {
+        let mut w = PhysicsWorld::new(cfg());
+        let solids = vec![0, 1, 0]; // 3x1, solid at x=1
+        w.attach_tilemap(TileMapDesc {
+            origin: Vec2::new(0.0, 0.0),
+            cell: 1.0,
+            width: 3,
+            height: 1,
+            solids: &solids,
+            mask: LayerMask::simple(2, 1),
+            user_key: None,
+        });
+        let origin = Vec2::new(0.1, 0.5);
+        let dir = Vec2::new(1.0, 0.0);
+        let mask = LayerMask::simple(1, 2);
+        let h1 = w.raycast_tiles(origin, dir, 0.8, mask);
+        assert!(h1.is_none());
+        let h2 = w.raycast_tiles(origin, dir, 10.0, mask).unwrap();
+        let t2 = h2.1.toi;
+        assert!(t2 > 0.8);
+        let h3 = w.raycast_tiles(origin, dir, t2, mask).unwrap();
+        assert!((h3.1.toi - t2).abs() < 1e-5);
+    }
+
+    #[test]
+    fn test_safe_pos_no_overlap_after_sweep() {
+        let mut w = PhysicsWorld::new(cfg());
+        let solids = vec![0, 1, 0, 0, 1, 0, 0, 1, 0];
+        w.attach_tilemap(TileMapDesc {
+            origin: Vec2::new(0.0, 0.0),
+            cell: 1.0,
+            width: 3,
+            height: 3,
+            solids: &solids,
+            mask: LayerMask::simple(2, 1),
+            user_key: None,
+        });
+        let start = Vec2::new(0.2, 1.5);
+        let he = Vec2::splat(0.4);
+        let vel = Vec2::new(3.0, 0.0);
+        let (_tref, hit, _key) = w
+            .sweep_aabb_tiles(start, he, vel, LayerMask::simple(1, 2))
+            .unwrap();
+        let p = hit.hint.safe_pos.expect("safe_pos should exist");
+        let hits = w.query_aabb_all(p, he, LayerMask::simple(1, 2));
+        assert!(!hits.iter().any(|(b, _)| matches!(b, BodyRef::Tile(_))));
+    }
+
+    #[test]
+    fn test_start_embedded_emits_overlap_event() {
+        let mut w = PhysicsWorld::new(cfg());
+        let solids = vec![1]; // 1x1 solid at origin cell [0,0]
+        w.attach_tilemap(TileMapDesc {
+            origin: Vec2::new(0.0, 0.0),
+            cell: 1.0,
+            width: 1,
+            height: 1,
+            solids: &solids,
+            mask: LayerMask::simple(2, 1),
+            user_key: Some(42),
+        });
+        w.begin_frame();
+        // AABB entirely inside the tile, no motion
+        let mask = LayerMask::simple(1, 2);
+        w.push_aabb(
+            Vec2::new(0.5, 0.5),
+            Vec2::splat(0.1),
+            Vec2::ZERO,
+            mask,
+            Some(7),
+        );
+        w.end_frame();
+        w.generate_events();
+        let evs = w.drain_events();
+        assert!(evs.iter().any(|e| matches!(e.kind, EventKind::Overlap)
+            && matches!(e.b, BodyRef::Tile(_))
+            && e.overlap.unwrap().hint.start_embedded));
+    }
+
+    #[test]
+    fn test_tile_raycast_monotonicity_random() {
+        let mut w = PhysicsWorld::new(cfg());
+        // map with a single solid column at x=10
+        let width = 32u32;
+        let height = 16u32;
+        let mut solids = vec![0u8; (width * height) as usize];
+        for y in 0..height {
+            solids[(y * width + 10) as usize] = 1;
+        }
+        w.attach_tilemap(TileMapDesc {
+            origin: Vec2::new(0.0, 0.0),
+            cell: 1.0,
+            width,
+            height,
+            solids: &solids,
+            mask: LayerMask::simple(2, 1),
+            user_key: None,
+        });
+        let mask = LayerMask::simple(1, 2);
+        let mut seed = 1234567u32;
+        let lcg = |s: &mut u32| {
+            *s = s.wrapping_mul(1664525).wrapping_add(1013904223);
+            *s
+        };
+        for _ in 0..50 {
+            let ry = (lcg(&mut seed) as f32 / u32::MAX as f32) * (height as f32 - 1.0) + 0.5;
+            let ox = (lcg(&mut seed) as f32 / u32::MAX as f32) * 5.0; // start in [0,5)
+            let origin = Vec2::new(ox, ry);
+            let dir = Vec2::new(1.0, 0.0);
+            let small = 1.0; // < distance to column at x=10
+            let big = 100.0;
+            let h_small = w.raycast_tiles(origin, dir, small, mask);
+            let h_big = w.raycast_tiles(origin, dir, big, mask);
+            if let Some((_tref_s, hs, _)) = h_small {
+                let (_tref_b, hb, _) = h_big.expect("big max_t should retain hit");
+                assert!((hs.toi - hb.toi).abs() < 1e-5);
+            }
+        }
+    }
+
+    #[test]
+    fn test_safe_pos_invariant_random() {
+        let mut w = PhysicsWorld::new(cfg());
+        // vertical wall at x=5 across all rows
+        let width = 16u32;
+        let height = 16u32;
+        let mut solids = vec![0u8; (width * height) as usize];
+        for y in 0..height {
+            solids[(y * width + 5) as usize] = 1;
+        }
+        w.attach_tilemap(TileMapDesc {
+            origin: Vec2::new(0.0, 0.0),
+            cell: 1.0,
+            width,
+            height,
+            solids: &solids,
+            mask: LayerMask::simple(2, 1),
+            user_key: None,
+        });
+        let mask = LayerMask::simple(1, 2);
+        let mut seed = 42u32;
+        let lcg = |s: &mut u32| {
+            *s = s.wrapping_mul(1664525).wrapping_add(1013904223);
+            *s
+        };
+        for _ in 0..40 {
+            let y = (lcg(&mut seed) as f32 / u32::MAX as f32) * 10.0 + 2.0;
+            let start_x = (lcg(&mut seed) as f32 / u32::MAX as f32) * 3.0;
+            let start = Vec2::new(start_x, y);
+            let he = Vec2::new(0.2, 0.3);
+            let vel = Vec2::new(4.0 + (lcg(&mut seed) as f32 / u32::MAX as f32) * 2.0, 0.0);
+            if let Some((_tref, hit, _)) = w.sweep_aabb_tiles(start, he, vel, mask)
+                && let Some(p) = hit.hint.safe_pos
+            {
+                let hits = w.query_aabb_all(p, he, mask);
+                assert!(!hits.iter().any(|(b, _)| matches!(b, BodyRef::Tile(_))));
+            }
+        }
+    }
+
+    #[test]
+    fn test_tile_raycast_diagonal_hits_correct_cell() {
+        let mut w = PhysicsWorld::new(cfg());
+        // 16x16 map with a single solid at (5,5)
+        let width = 16u32;
+        let height = 16u32;
+        let mut solids = vec![0u8; (width * height) as usize];
+        solids[(5 * width + 5) as usize] = 1;
+        w.attach_tilemap(TileMapDesc {
+            origin: Vec2::new(0.0, 0.0),
+            cell: 1.0,
+            width,
+            height,
+            solids: &solids,
+            mask: LayerMask::simple(2, 1),
+            user_key: None,
+        });
+        let mask = LayerMask::simple(1, 2);
+        let origin = Vec2::new(0.25, 0.25);
+        let dir = Vec2::new(1.0, 1.0).normalize();
+        let (_tref, hit, _key) = w
+            .raycast_tiles(origin, dir, 100.0, mask)
+            .expect("expected tile hit");
+        // The cell index should be (5,5)
+        if let Some((TileRef { cell_xy, .. }, _, _)) = w.raycast_tiles(origin, dir, 100.0, mask) {
+            assert_eq!(cell_xy.x, 5);
+            assert_eq!(cell_xy.y, 5);
+            // Contact must lie on one of the tile boundaries [1.0 tolerance]
+            let cx = hit.contact.x;
+            let cy = hit.contact.y;
+            let on_vert = (cx - 5.0).abs() < 1e-3 || (cx - 6.0).abs() < 1e-3;
+            let on_horz = (cy - 5.0).abs() < 1e-3 || (cy - 6.0).abs() < 1e-3;
+            assert!(on_vert || on_horz);
+        } else {
+            panic!("no tile hit");
+        }
+    }
+
+    #[test]
+    fn test_circle_sweep_minkowski_equivalence() {
+        let mut w = PhysicsWorld::new(cfg());
+        // vertical wall at x=5 across all rows
+        let width = 16u32;
+        let height = 16u32;
+        let mut solids = vec![0u8; (width * height) as usize];
+        for y in 0..height {
+            solids[(y * width + 5) as usize] = 1;
+        }
+        w.attach_tilemap(TileMapDesc {
+            origin: Vec2::new(0.0, 0.0),
+            cell: 1.0,
+            width,
+            height,
+            solids: &solids,
+            mask: LayerMask::simple(2, 1),
+            user_key: None,
+        });
+        let mask = LayerMask::simple(1, 2);
+        let c = Vec2::new(1.5, 3.5);
+        let r = 0.4;
+        let vel = Vec2::new(6.0, 0.0);
+        let (_t_aabb, hit_aabb, _) = w.sweep_aabb_tiles(c, Vec2::splat(r), vel, mask).unwrap();
+        let (_t_circ, hit_circ, _) = w.sweep_circle_tiles(c, r, vel, mask).unwrap();
+        assert!((hit_aabb.toi - hit_circ.toi).abs() < 5e-3);
+        // Normals should closely match
+        let dn = (hit_aabb.normal - hit_circ.normal).length();
+        assert!(dn < 1e-3);
+    }
+
+    // Note: diagonal raycast octants are covered by test_tile_raycast_diagonal_hits_correct_cell.
+
+    #[test]
+    fn test_circle_sweep_diagonal_vel_and_radii() {
+        let mut w = PhysicsWorld::new(cfg());
+        // 32x32 map with vertical wall at x=16
+        let width = 32u32; let height = 32u32; let mut solids = vec![0u8; (width*height) as usize];
+        for y in 0..height { solids[(y*width + 16) as usize] = 1; }
+        w.attach_tilemap(TileMapDesc { origin: Vec2::new(0.0,0.0), cell: 1.0, width, height, solids: &solids, mask: LayerMask::simple(2,1), user_key: None });
+        let mask = LayerMask::simple(1,2);
+        let center = Vec2::new(12.5, 10.5);
+        let radii = [0.1f32, 0.25, 0.5, 0.9];
+        let vels = [Vec2::new(6.0, 3.0), Vec2::new(12.0, -6.0), Vec2::new(8.0, 4.0)];
+        for &r in &radii {
+            for &v in &vels {
+                let (_tr1, hit_c, _k1) = w.sweep_circle_tiles(center, r, v, mask).expect("circle sweep should hit");
+                let (_tr2, hit_a, _k2) = w.sweep_aabb_tiles(center, Vec2::splat(r), v, mask).expect("aabb(r) sweep should hit");
+                assert!((hit_c.toi - hit_a.toi).abs() < 5e-3, "toi mismatch r={} v=({},{})", r, v.x, v.y);
+                let dn = (hit_c.normal - hit_a.normal).length();
+                assert!(dn < 1e-2, "normal mismatch r={} v=({},{})", r, v.x, v.y);
+                assert!(hit_c.hint.safe_pos.is_some());
+            }
+        }
     }
 }

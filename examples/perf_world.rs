@@ -16,6 +16,8 @@ fn main() {
         enable_sweep_events: true,
         max_events: 1_000_000,
         enable_timing: true,
+        tile_eps: 1e-4,
+        require_mutual_consent: true,
     });
 
     let n = 20_000usize; // number of colliders

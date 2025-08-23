@@ -85,6 +85,77 @@ pub trait PhysicsWorldApi {
         mask: LayerMask,
     ) -> Vec<(FrameId, Option<ColKey>)>;
 
+    // --- Tilemap lifecycle --------------------------------------------------
+
+    /// Attach a tilemap layer. Multiple tilemaps are allowed.
+    fn attach_tilemap(&mut self, desc: TileMapDesc) -> TileMapRef;
+
+    /// Update a rectangular region (x,y,w,h) of the tile buffer for `map`.
+    /// `data.len()` must equal `w*h` (row-major).
+    fn update_tiles(&mut self, map: TileMapRef, changed_rect: (u32, u32, u32, u32), data: &[u8]);
+
+    /// Detach and free a tilemap.
+    fn detach_tilemap(&mut self, map: TileMapRef);
+
+    // --- Unified queries (colliders + tiles; closest or full set) ----------
+
+    /// Raycast against colliders and tiles; returns the closest hit.
+    fn raycast_all(
+        &self,
+        origin: Vec2,
+        dir: Vec2,
+        mask: LayerMask,
+        max_t: f32,
+    ) -> Option<(BodyRef, SweepHit, Option<ColKey>)>;
+
+    /// Return all bodies (collider or tile) containing the point.
+    fn query_point_all(&self, p: Vec2, mask: LayerMask) -> Vec<(BodyRef, Option<ColKey>)>;
+
+    /// Return all bodies overlapping the AABB.
+    fn query_aabb_all(
+        &self,
+        center: Vec2,
+        half_extents: Vec2,
+        mask: LayerMask,
+    ) -> Vec<(BodyRef, Option<ColKey>)>;
+
+    /// Return all bodies overlapping the circle.
+    fn query_circle_all(
+        &self,
+        center: Vec2,
+        radius: f32,
+        mask: LayerMask,
+    ) -> Vec<(BodyRef, Option<ColKey>)>;
+
+    // --- Tile-only fast path (for profiling / direct control) ---------------
+
+    /// Raycast against tiles only (closest hit across all tilemaps).
+    fn raycast_tiles(
+        &self,
+        origin: Vec2,
+        dir: Vec2,
+        max_t: f32,
+        mask: LayerMask,
+    ) -> Option<(TileRef, SweepHit, Option<ColKey>)>;
+
+    /// Sweep AABB against tiles only (first hit).
+    fn sweep_aabb_tiles(
+        &self,
+        center: Vec2,
+        half_extents: Vec2,
+        vel: Vec2,
+        mask: LayerMask,
+    ) -> Option<(TileRef, SweepHit, Option<ColKey>)>;
+
+    /// Sweep circle against tiles only (first hit).
+    fn sweep_circle_tiles(
+        &self,
+        center: Vec2,
+        radius: f32,
+        vel: Vec2,
+        mask: LayerMask,
+    ) -> Option<(TileRef, SweepHit, Option<ColKey>)>;
+
     // --- Pairwise checks ---------------------------------------------------
 
     /// Overlap test between two frame-local colliders (same-frame only).
@@ -144,4 +215,8 @@ pub trait NarrowphaseApi {
         r1: f32,
         v1: Vec2,
     ) -> Option<SweepHit>;
+
+    // Tile helpers -----------------------------------------------------------
+    fn aabb_tile_pushout(c: Vec2, he: Vec2, tile_min: Vec2, cell: f32) -> (Vec2, f32, Vec2);
+    fn circle_tile_pushout(c: Vec2, r: f32, tile_min: Vec2, cell: f32) -> (Vec2, f32, Vec2);
 }

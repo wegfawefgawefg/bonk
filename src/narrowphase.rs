@@ -69,11 +69,7 @@ impl NarrowphaseApi for Narrowphase {
         let toi = if tmin < 0.0 { 0.0 } else { tmin };
         let contact = origin + dir * toi;
         let normal = if tmin < 0.0 { Vec2::ZERO } else { n_enter };
-        Some(SweepHit {
-            toi,
-            normal,
-            contact,
-        })
+        Some(SweepHit { toi, normal, contact, hint: ResolutionHint::default() })
     }
 
     fn ray_circle(origin: Vec2, dir: Vec2, center: Vec2, r: f32) -> Option<SweepHit> {
@@ -100,11 +96,7 @@ impl NarrowphaseApi for Narrowphase {
         let n = contact - center;
         let len = n.length();
         let normal = if len > 0.0 { n / len } else { Vec2::ZERO };
-        Some(SweepHit {
-            toi: t,
-            normal,
-            contact,
-        })
+        Some(SweepHit { toi: t, normal, contact, hint: ResolutionHint::default() })
     }
 
     fn line_segment_aabb(a: Vec2, b: Vec2, aabb_min: Vec2, aabb_max: Vec2) -> Option<SweepHit> {
@@ -178,11 +170,7 @@ impl NarrowphaseApi for Narrowphase {
         } else {
             n_enter
         };
-        Some(SweepHit {
-            toi,
-            normal,
-            contact,
-        })
+        Some(SweepHit { toi, normal, contact, hint: ResolutionHint::default() })
     }
 
     fn line_segment_circle(a: Vec2, b: Vec2, center: Vec2, r: f32) -> Option<SweepHit> {
@@ -215,11 +203,7 @@ impl NarrowphaseApi for Narrowphase {
         let n = contact - center;
         let len = n.length();
         let normal = if len > 0.0 { n / len } else { Vec2::ZERO };
-        Some(SweepHit {
-            toi: t,
-            normal,
-            contact,
-        })
+        Some(SweepHit { toi: t, normal, contact, hint: ResolutionHint::default() })
     }
 
     fn overlap_aabb_aabb(c0: Vec2, h0: Vec2, c1: Vec2, h1: Vec2) -> Option<Overlap> {
@@ -255,11 +239,7 @@ impl NarrowphaseApi for Narrowphase {
         // Move to A's surface along the chosen axis
         contact -= normal * axis_h;
 
-        Some(Overlap {
-            normal,
-            depth,
-            contact,
-        })
+        Some(Overlap { normal, depth, contact, hint: ResolutionHint::default() })
     }
 
     fn overlap_circle_circle(c0: Vec2, r0: f32, c1: Vec2, r1: f32) -> Option<Overlap> {
@@ -275,21 +255,13 @@ impl NarrowphaseApi for Narrowphase {
             let normal = Vec2::ZERO;
             let depth = rsum; // maximal, but depth is >= 0; choosing r0+r1
             let contact = c0; // arbitrary representative
-            return Some(Overlap {
-                normal,
-                depth,
-                contact,
-            });
+            return Some(Overlap { normal, depth, contact, hint: ResolutionHint::default() });
         }
         let dist = dist2.sqrt();
         let normal = delta / dist; // from B into A
         let depth = (rsum - dist).max(0.0);
         let contact = c0 - normal * r0;
-        Some(Overlap {
-            normal,
-            depth,
-            contact,
-        })
+        Some(Overlap { normal, depth, contact, hint: ResolutionHint::default() })
     }
 
     fn overlap_point_aabb(p: Vec2, c: Vec2, h: Vec2) -> bool {
@@ -325,11 +297,7 @@ impl NarrowphaseApi for Narrowphase {
         let center_at_hit = c0 + vrel * hit.toi;
         let normal = hit.normal;
         let contact = center_at_hit - normal * h0;
-        Some(SweepHit {
-            toi: hit.toi,
-            normal,
-            contact,
-        })
+        Some(SweepHit { toi: hit.toi, normal, contact, hint: ResolutionHint::default() })
     }
 
     fn sweep_circle_aabb(
@@ -354,11 +322,7 @@ impl NarrowphaseApi for Narrowphase {
         let center_at_hit = c + vrel * hit.toi;
         let normal = hit.normal;
         let contact = center_at_hit - normal * r;
-        Some(SweepHit {
-            toi: hit.toi,
-            normal,
-            contact,
-        })
+        Some(SweepHit { toi: hit.toi, normal, contact, hint: ResolutionHint::default() })
     }
 
     fn sweep_circle_circle(
@@ -381,11 +345,43 @@ impl NarrowphaseApi for Narrowphase {
         let center_at_hit = c0 + vrel * hit.toi;
         let normal = hit.normal; // outward from expanded circle => from B to A
         let contact = center_at_hit - normal * r0;
-        Some(SweepHit {
-            toi: hit.toi,
-            normal,
-            contact,
-        })
+        Some(SweepHit { toi: hit.toi, normal, contact, hint: ResolutionHint::default() })
+    }
+
+    fn aabb_tile_pushout(c: Vec2, he: Vec2, tile_min: Vec2, cell: f32) -> (Vec2, f32, Vec2) {
+        // Axis-aligned minimal push-out from AABB vs tile cell [min, min+cell]
+        let tile_max = tile_min + Vec2::splat(cell);
+        // Treat as AABB vs AABB overlap
+        let b_c = (tile_min + tile_max) * 0.5;
+        let b_h = Vec2::splat(cell * 0.5);
+        if let Some(ov) = Self::overlap_aabb_aabb(c, he, b_c, b_h) {
+            (ov.normal, ov.depth, ov.contact)
+        } else {
+            (Vec2::ZERO, 0.0, c)
+        }
+    }
+
+    fn circle_tile_pushout(c: Vec2, r: f32, tile_min: Vec2, cell: f32) -> (Vec2, f32, Vec2) {
+        let tile_max = tile_min + Vec2::splat(cell);
+        // Circle vs AABB: approximate via closest point
+        let b_c = (tile_min + tile_max) * 0.5;
+        let b_h = Vec2::splat(cell * 0.5);
+        // Compute closest point on tile to circle center
+        let min = b_c - b_h;
+        let max = b_c + b_h;
+        let clamp = |v: f32, lo: f32, hi: f32| v.max(lo).min(hi);
+        let closest = Vec2::new(clamp(c.x, min.x, max.x), clamp(c.y, min.y, max.y));
+        let delta = c - closest;
+        let d2 = delta.length_squared();
+        if d2 <= r * r {
+            let d = d2.sqrt();
+            let normal = if d > 1e-6 { delta / d } else { Vec2::new(1.0, 0.0) };
+            let depth = (r - d).max(0.0);
+            let contact = closest;
+            (normal, depth, contact)
+        } else {
+            (Vec2::ZERO, 0.0, c)
+        }
     }
 }
 

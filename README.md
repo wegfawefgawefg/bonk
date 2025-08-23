@@ -23,6 +23,7 @@ Box2D and Rapier are big. 90% of the time I don't need or want to spend hours tw
 - Raycast, Point, AABB, and Circle queries.
 - Events come with Time of Impact (TOI) (via CCD of swept AABBs)
 - No penetration.
+- Tiles: dense 0/1 tilemaps with fast DDA ray/sweep and unified queries.
 
 ## Install
 
@@ -43,6 +44,8 @@ let mut world = PhysicsWorld::new(WorldConfig {
     enable_sweep_events: true,
     max_events: 1024,
     enable_timing: false, // this is for performance. leave it off unless ur trying to figure out the cell size or something.
+    tile_eps: 1e-4,
+    require_mutual_consent: true,
 });
 
 // Define layer masks. Assume this is like breakout/arkanoid or something.
@@ -102,6 +105,60 @@ loop {
 - `query_aabb(center, half_extents, mask)`
 - `query_circle(center, radius, mask)`
 
+### Tile + Unified (v0.2)
+
+- `attach_tilemap(TileMapDesc) -> TileMapRef`
+- `update_tiles(map, (x,y,w,h), data)` and `detach_tilemap(map)`
+- `raycast_all(origin, dir, mask, max_t) -> Option<(BodyRef, SweepHit, Option<ColKey>)>`
+- `query_point_all(...) -> Vec<(BodyRef, Option<ColKey>)>`
+- `query_aabb_all(...) -> Vec<(BodyRef, Option<ColKey>)>`
+- `query_circle_all(...) -> Vec<(BodyRef, Option<ColKey>)>`
+- Tile-only helpers: `raycast_tiles`, `sweep_aabb_tiles`, `sweep_circle_tiles`
+
+`BodyRef` identifies either a collider (`BodyRef::Collider(FrameId)`) or a specific tile cell (`BodyRef::Tile(TileRef)`). `SweepHit` and `Overlap` now include a `hint: ResolutionHint` with:
+- `safe_pos`: suggested non-penetrating center position
+- `start_embedded`: true if the shape started inside a hit
+- `fully_embedded`: true if no push-out was possible
+
+## Tile Usage (v0.2)
+
+```rust
+use nobonk::*;
+use glam::Vec2;
+
+let mut world = PhysicsWorld::new(WorldConfig {
+    cell_size: 1.0,
+    dt: 1.0/60.0,
+    tighten_swept_aabb: true,
+    enable_overlap_events: true,
+    enable_sweep_events: true,
+    max_events: 10_000,
+    enable_timing: false,
+    tile_eps: 1e-4,
+    require_mutual_consent: true,
+});
+
+let bits = vec![0,1,0]; // 3x1 map with middle solid
+let _map = world.attach_tilemap(TileMapDesc {
+    origin: Vec2::new(0.0, 0.0),
+    cell: 1.0,
+    width: 3,
+    height: 1,
+    solids: &bits,
+    mask: LayerMask::simple(2, 1),
+    user_key: Some(0xT1LES),
+});
+
+let mask = LayerMask::simple(1, 2);
+if let Some((_who, hit, _)) = world.raycast_all(Vec2::new(-0.5, 0.5), Vec2::new(1.0, 0.0), mask, 100.0) {
+    if let Some(p) = hit.hint.safe_pos { /* candidate stop position */ }
+}
+
+if let Some((_tile, hit, _)) = world.sweep_aabb_tiles(Vec2::new(0.2,0.5), Vec2::splat(0.3), Vec2::new(2.0,0.0), mask) {
+    // reflect or clamp using hit.normal and hit.hint.safe_pos
+}
+```
+
 ### Overlap
 
 - `overlap_pair(a: FrameId, b: FrameId) -> Option<Overlap>`
@@ -117,6 +174,8 @@ loop {
 - Circle↔AABB overlap returns a representative result with zero normal/depth.
 - Points are treated as zero-radius circles for CCD.
 - Grid binning can include multiple cells when bounds straddle cell edges.
+- Tiles use top-left `origin` and square `cell` size. Consent masking applies between collider masks and tilemap mask, honoring `WorldConfig { require_mutual_consent }`.
+- `WorldConfig { tile_eps }` controls the backoff used to compute `hint.safe_pos` in tile sweeps.
 
 ## Run Examples
 
@@ -125,6 +184,7 @@ loop {
 - `cargo run --example bench_narrowphase`
 - `cargo run --example perf_world`
 - `cargo run --example perf_sweep` (CSV)
+- `cargo run --example perf_tiles` (tile ray/sweep throughput)
 
 <br>
 

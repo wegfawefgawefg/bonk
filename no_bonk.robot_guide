@@ -1,16 +1,22 @@
-nobonk quick guide for llms/agents 
+nobonk quick guide for llms/agents
 
 scope
-- 2D detection-only. No resolution/forces. Ephemeral per-frame world.
-- shapes: AABB (center + half_extents), Circle (center + radius), Point.
+- 2D detection-only. No resolution/forces. Colliders are ephemeral per-frame; tilemaps are attached/detached and persist across frames.
+- shapes: AABB (center + half_extents), Circle (center + radius), Point. Tiles are dense 0/1 grids.
 - math: glam::Vec2. import: `use nobonk::*; use glam::Vec2;`
 
 frame lifecycle (call order)
 1) world.begin_frame()
 2) world.push_* per collider (AABB/Circle/Point) with velocity + mask (+ optional user key)
-3) world.end_frame()  // builds grid and aabbs; required before queries/events
-4) world.generate_events()  // optional, only if you want events
+3) world.end_frame()  // builds grid and aabbs for colliders; required before collider/unified queries and events
+4) world.generate_events()  // optional; emits collider↔collider and collider↔tile events
 5) world.drain_events() -> Vec<Event>  // optional, consumes internal buffer
+
+tilemap lifecycle
+- Attach once with `attach_tilemap(TileMapDesc) -> TileMapRef`.
+- Update any time with `update_tiles(map, (x,y,w,h), data)`; `data.len() == w*h` row-major.
+- Remove with `detach_tilemap(map)`.
+- Tile coordinates: `origin` is world-space top-left of cell (0,0); `cell` is square size.
 
 config (WorldConfig)
 - cell_size: f32                   // world units per grid cell (>= ~1e-5)
@@ -20,16 +26,20 @@ config (WorldConfig)
 - enable_sweep_events: bool        // emit CCD TOI events when relative vel != 0
 - max_events: usize                // cap; extras are dropped
 - enable_timing: bool              // record timing breakdowns
+- tile_eps: f32                    // backoff epsilon to compute `hint.safe_pos` for sweeps
+- require_mutual_consent: bool     // if true, require A↔B consent for colliders and tiles
 
 core ids and masks
 - FrameId(u32): frame-local handle for a pushed collider. Not persistent across frames.
-- ColKey = u64: optional user key, echoed in events/queries (use to map to your ECS/entity ids).
+- TileMapRef(u32): opaque handle for a registered tilemap layer.
+- TileRef { map: TileMapRef, cell_xy: UVec2 }: identifies a specific tile cell.
+- BodyRef: Collider(FrameId) | Tile(TileRef): participant in events/unified queries.
+- ColKey = u64: optional user key, echoed in events/queries (use to map to your ECS/entity ids). For tiles, this is the tilemap’s `user_key`.
 - LayerMask { layer: u32, collides_with: u32, exclude: u32 }
   - convenience: LayerMask::simple(layer, collides_with)
   - consent rule: A may hit B iff
       (A.collides_with & B.layer) != 0 && (A.exclude & B.layer) == 0
-    engines using this library SHOULD also require symmetric consent (B vs A).
-    world methods enforce mutual consent for events and queries.
+    when `require_mutual_consent=true`, also require the symmetric predicate (B vs A). All events and queries honor this.
 
 collider description and motion
 - ColliderKind:
@@ -39,19 +49,25 @@ collider description and motion
 - ColliderDesc { kind: ColliderKind, center: Vec2, mask: LayerMask, user_key: Option<ColKey> }
 - Motion { vel: Vec2 }  // per-frame velocity; CCD uses relative velocity scaled by dt
 
+tilemap description
+- TileMapDesc { origin: Vec2, cell: f32, width: u32, height: u32, solids: &'a [u8], mask: LayerMask, user_key: Option<ColKey> }
+  - `solids`: dense row-major buffer, len == width*height, nonzero = solid
+
 events and hits
 - EventKind: Overlap | Sweep
-- Overlap { normal: Vec2, depth: f32, contact: Vec2 }
+- ResolutionHint { safe_pos: Option<Vec2>, start_embedded: bool, fully_embedded: bool }
+- Overlap { normal: Vec2, depth: f32, contact: Vec2, hint: ResolutionHint }
   - normals generally point from B into A.
   - AABB↔AABB and Circle↔Circle fill normal/depth/contact.
   - Circle↔AABB overlap returns a representative contact with zero normal/depth.
-- SweepHit { toi: f32 in [0,1], normal: Vec2, contact: Vec2 }
-- Event { kind, a: FrameId, b: FrameId, a_key: Option<ColKey>, b_key: Option<ColKey>, overlap: Option<Overlap>, sweep: Option<SweepHit> }
+- SweepHit { toi: f32 in [0,1], normal: Vec2, contact: Vec2, hint: ResolutionHint }
+- Event { kind, a: BodyRef, b: BodyRef, a_key: Option<ColKey>, b_key: Option<ColKey>, overlap: Option<Overlap>, sweep: Option<SweepHit> }
 - generation semantics:
-  - pairs built from uniform grid, deduplicated across cells.
+  - pairs built from uniform grid (colliders), deduplicated across cells; tiles are traversed via DDA for ray/sweep and overlapped cells for overlaps.
+  - include collider↔collider and collider↔tile pairs; honor `require_mutual_consent`.
   - if relative velocity != ~0 and enable_sweep_events, emit Sweep if any; else if enable_overlap_events, emit Overlap if any.
   - if relative velocity == ~0 and enable_overlap_events, emit Overlap if any.
-  - at most one event per pair; buffer capped by max_events.
+  - at most one event per collider↔collider or collider↔tile per frame; buffer capped by max_events.
   - duplicate user_key within a frame triggers debug_assert! (debug only); release builds allow last-write-wins mapping for by_key lookups.
 
 public api surface (impl PhysicsWorldApi for PhysicsWorld)
@@ -67,13 +83,29 @@ public api surface (impl PhysicsWorldApi for PhysicsWorld)
 - generate_events(&mut self)
 - drain_events(&mut self) -> Vec<Event>
 
-// queries (require end_frame; use mutual mask consent against the provided mask)
+// tilemap lifecycle
+- attach_tilemap(&mut self, desc: TileMapDesc) -> TileMapRef
+- update_tiles(&mut self, map: TileMapRef, changed_rect: (u32,u32,u32,u32), data: &[u8])
+- detach_tilemap(&mut self, map: TileMapRef)
+
+// collider-only queries (require end_frame; use mutual mask consent against the provided mask)
 - raycast(&self, origin: Vec2, dir: Vec2, mask: LayerMask, max_t: f32) -> Option<(FrameId, SweepHit, Option<ColKey>)>
-  - returns closest hit with 0 <= toi <= max_t (dir must be non-zero).
+  - returns closest collider hit with 0 <= toi <= max_t (dir must be non-zero).
   - if origin starts inside shape: toi=0, normal=Vec2::ZERO for AABBs/segments.
 - query_point(&self, p: Vec2, mask: LayerMask) -> Vec<(FrameId, Option<ColKey>)>
 - query_aabb(&self, center: Vec2, half_extents: Vec2, mask: LayerMask) -> Vec<(FrameId, Option<ColKey>)>
 - query_circle(&self, center: Vec2, radius: f32, mask: LayerMask) -> Vec<(FrameId, Option<ColKey>)>
+
+// unified queries (colliders + tiles; require end_frame for collider participation)
+- raycast_all(&self, origin: Vec2, dir: Vec2, mask: LayerMask, max_t: f32) -> Option<(BodyRef, SweepHit, Option<ColKey>)>
+- query_point_all(&self, p: Vec2, mask: LayerMask) -> Vec<(BodyRef, Option<ColKey>)>
+- query_aabb_all(&self, center: Vec2, half_extents: Vec2, mask: LayerMask) -> Vec<(BodyRef, Option<ColKey>)>
+- query_circle_all(&self, center: Vec2, radius: f32, mask: LayerMask) -> Vec<(BodyRef, Option<ColKey>)>
+
+// tile-only fast paths
+- raycast_tiles(&self, origin: Vec2, dir: Vec2, max_t: f32, mask: LayerMask) -> Option<(TileRef, SweepHit, Option<ColKey>)>
+- sweep_aabb_tiles(&self, center: Vec2, half_extents: Vec2, vel: Vec2, mask: LayerMask) -> Option<(TileRef, SweepHit, Option<ColKey>)>
+- sweep_circle_tiles(&self, center: Vec2, radius: f32, vel: Vec2, mask: LayerMask) -> Option<(TileRef, SweepHit, Option<ColKey>)>
 
 // pairwise checks (same-frame only)
 - overlap_pair(&self, a: FrameId, b: FrameId) -> Option<Overlap>
@@ -101,10 +133,19 @@ ray/sweep/narrowphase semantics (NarrowphaseApi impl)
 - sweep_aabb_aabb(c0, h0, v0, c1, h1, v1) -> Option<SweepHit>  // uses vrel = v0 - v1; expects t in [0,1]
 - sweep_circle_aabb(c, r, v, box_c, box_h, box_v) -> Option<SweepHit>
 - sweep_circle_circle(c0, r0, v0, c1, r1, v1) -> Option<SweepHit>
+- aabb_tile_pushout(c, he, tile_min, cell) -> (normal, depth, contact)
+- circle_tile_pushout(c, r, tile_min, cell) -> (normal, depth, contact)
 
-usage sketch (minimal)
+tile ray/sweep semantics (concise)
+- Ray DDA: step across grid using tMaxX/Y and tDeltaX/Y. On entering a consenting solid cell, compute boundary hit; set `hint.safe_pos = origin + dir * (toi - eps)` where `eps = max(tile_eps, 1e-6)`; `start_embedded=false`, `fully_embedded=false`.
+- AABB sweep: DDA on motion; first consenting solid hit decides axis normal (±X if tx<ty else ±Y; consistent tie-break). `hint.safe_pos = p0 + v*(toi - eps)`.
+- Start-embedded: if overlapping consenting solids at t=0, set `start_embedded=true` and try axis push-out to nearest empty along ±X/±Y. If none, `fully_embedded=true` and `safe_pos=None`.
+- Circle sweep: Minkowski inflate tiles by r (equivalently, sweep AABB with he=(r,r)).
+- Unified ray/queries: `raycast_all` returns closer of collider-only vs tile-only hits. `query_*_all` returns union (BodyRef + keys).
+
+usage sketch (minimal, colliders)
 use nobonk::*; use glam::Vec2;
-let mut world = PhysicsWorld::new(WorldConfig { cell_size: 32.0, dt: 1.0/60.0, tighten_swept_aabb: true, enable_overlap_events: true, enable_sweep_events: true, max_events: 2048, enable_timing: false });
+let mut world = PhysicsWorld::new(WorldConfig { cell_size: 32.0, dt: 1.0/60.0, tighten_swept_aabb: true, enable_overlap_events: true, enable_sweep_events: true, max_events: 2048, enable_timing: false, tile_eps: 1e-4, require_mutual_consent: true });
 let ball = LayerMask::simple(1, 2);
 let block = LayerMask::simple(2, 1);
 world.begin_frame();
@@ -115,12 +156,20 @@ if let Some((id, hit, key)) = world.raycast(Vec2::new(-10.0, 0.0), Vec2::new(1.0
 world.generate_events();
 for ev in world.drain_events() { match ev.kind { EventKind::Sweep => { /* use ev.sweep.unwrap() */ }, EventKind::Overlap => { /* use ev.overlap.unwrap() */ } } }
 
+usage sketch (tiles + unified)
+use nobonk::*; use glam::Vec2;
+let mut world = PhysicsWorld::new(WorldConfig { cell_size: 1.0, dt: 1.0/60.0, tighten_swept_aabb: true, enable_overlap_events: true, enable_sweep_events: true, max_events: 10_000, enable_timing: false, tile_eps: 1e-4, require_mutual_consent: true });
+let bits = vec![0u8,1,0]; // 3x1 map with middle solid
+let _map = world.attach_tilemap(TileMapDesc { origin: Vec2::new(0.0, 0.0), cell: 1.0, width: 3, height: 1, solids: &bits, mask: LayerMask::simple(2, 1), user_key: Some(0xC0FF_EEu64) });
+let mask = LayerMask::simple(1, 2);
+if let Some((_who, hit, _)) = world.raycast_all(Vec2::new(-0.5, 0.5), Vec2::new(1.0, 0.0), mask, 100.0) { if let Some(p) = hit.hint.safe_pos { /* candidate stop position */ } }
+if let Some((_tile, hit, _)) = world.sweep_aabb_tiles(Vec2::new(0.2,0.5), Vec2::splat(0.3), Vec2::new(2.0,0.0), mask) { /* reflect/clamp using hit.normal/safe_pos */ }
+
 notes/quirks
 - coordinates/units are arbitrary; pick consistent world units. dt scales motion in CCD (effective displacement = vel * dt).
-- cell_size influences broadphase: choose close to average collider diameter for perf.
-- queries/events honor mutual mask consent (both sides must allow).
+- cell_size influences collider broadphase; choose close to average collider diameter for perf.
+- queries/events honor mutual mask consent (both sides must allow when `require_mutual_consent=true`).
 - points are treated as 0-radius circles in CCD; overlaps return exact containment tests.
 - circle↔aabb overlap info is approximate (zero depth/normal) by design.
-- no persistence: re-add colliders every frame.
+- colliders are not persistent: re-add colliders every frame. Tilemaps persist until detached.
 - Option-returning APIs never panic; None indicates miss/no-hit.
-

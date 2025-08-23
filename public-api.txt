@@ -1,6 +1,8 @@
 pub mod nobonk
 pub mod nobonk::api
 pub trait nobonk::api::NarrowphaseApi
+pub fn nobonk::api::NarrowphaseApi::aabb_tile_pushout(c: glam::f32::vec2::Vec2, he: glam::f32::vec2::Vec2, tile_min: glam::f32::vec2::Vec2, cell: f32) -> (glam::f32::vec2::Vec2, f32, glam::f32::vec2::Vec2)
+pub fn nobonk::api::NarrowphaseApi::circle_tile_pushout(c: glam::f32::vec2::Vec2, r: f32, tile_min: glam::f32::vec2::Vec2, cell: f32) -> (glam::f32::vec2::Vec2, f32, glam::f32::vec2::Vec2)
 pub fn nobonk::api::NarrowphaseApi::line_segment_aabb(a: glam::f32::vec2::Vec2, b: glam::f32::vec2::Vec2, aabb_min: glam::f32::vec2::Vec2, aabb_max: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
 pub fn nobonk::api::NarrowphaseApi::line_segment_circle(a: glam::f32::vec2::Vec2, b: glam::f32::vec2::Vec2, center: glam::f32::vec2::Vec2, r: f32) -> core::option::Option<nobonk::SweepHit>
 pub fn nobonk::api::NarrowphaseApi::overlap_aabb_aabb(c0: glam::f32::vec2::Vec2, h0: glam::f32::vec2::Vec2, c1: glam::f32::vec2::Vec2, h1: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::Overlap>
@@ -13,6 +15,8 @@ pub fn nobonk::api::NarrowphaseApi::sweep_aabb_aabb(c0: glam::f32::vec2::Vec2, h
 pub fn nobonk::api::NarrowphaseApi::sweep_circle_aabb(c: glam::f32::vec2::Vec2, r: f32, v: glam::f32::vec2::Vec2, box_c: glam::f32::vec2::Vec2, box_h: glam::f32::vec2::Vec2, box_v: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
 pub fn nobonk::api::NarrowphaseApi::sweep_circle_circle(c0: glam::f32::vec2::Vec2, r0: f32, v0: glam::f32::vec2::Vec2, c1: glam::f32::vec2::Vec2, r1: f32, v1: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
 impl nobonk::NarrowphaseApi for nobonk::narrowphase::Narrowphase
+pub fn nobonk::narrowphase::Narrowphase::aabb_tile_pushout(c: glam::f32::vec2::Vec2, he: glam::f32::vec2::Vec2, tile_min: glam::f32::vec2::Vec2, cell: f32) -> (glam::f32::vec2::Vec2, f32, glam::f32::vec2::Vec2)
+pub fn nobonk::narrowphase::Narrowphase::circle_tile_pushout(c: glam::f32::vec2::Vec2, r: f32, tile_min: glam::f32::vec2::Vec2, cell: f32) -> (glam::f32::vec2::Vec2, f32, glam::f32::vec2::Vec2)
 pub fn nobonk::narrowphase::Narrowphase::line_segment_aabb(a: glam::f32::vec2::Vec2, b: glam::f32::vec2::Vec2, aabb_min: glam::f32::vec2::Vec2, aabb_max: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
 pub fn nobonk::narrowphase::Narrowphase::line_segment_circle(a: glam::f32::vec2::Vec2, b: glam::f32::vec2::Vec2, center: glam::f32::vec2::Vec2, r: f32) -> core::option::Option<nobonk::SweepHit>
 pub fn nobonk::narrowphase::Narrowphase::overlap_aabb_aabb(c0: glam::f32::vec2::Vec2, h0: glam::f32::vec2::Vec2, c1: glam::f32::vec2::Vec2, h1: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::Overlap>
@@ -25,7 +29,9 @@ pub fn nobonk::narrowphase::Narrowphase::sweep_aabb_aabb(c0: glam::f32::vec2::Ve
 pub fn nobonk::narrowphase::Narrowphase::sweep_circle_aabb(c: glam::f32::vec2::Vec2, r: f32, v: glam::f32::vec2::Vec2, box_c: glam::f32::vec2::Vec2, box_h: glam::f32::vec2::Vec2, box_v: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
 pub fn nobonk::narrowphase::Narrowphase::sweep_circle_circle(c0: glam::f32::vec2::Vec2, r0: f32, v0: glam::f32::vec2::Vec2, c1: glam::f32::vec2::Vec2, r1: f32, v1: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
 pub trait nobonk::api::PhysicsWorldApi
+pub fn nobonk::api::PhysicsWorldApi::attach_tilemap(&mut self, desc: nobonk::TileMapDesc<'_>) -> nobonk::TileMapRef
 pub fn nobonk::api::PhysicsWorldApi::begin_frame(&mut self)
+pub fn nobonk::api::PhysicsWorldApi::detach_tilemap(&mut self, map: nobonk::TileMapRef)
 pub fn nobonk::api::PhysicsWorldApi::drain_events(&mut self) -> alloc::vec::Vec<nobonk::Event>
 pub fn nobonk::api::PhysicsWorldApi::end_frame(&mut self)
 pub fn nobonk::api::PhysicsWorldApi::generate_events(&mut self)
@@ -37,13 +43,23 @@ pub fn nobonk::api::PhysicsWorldApi::push_aabb(&mut self, center: glam::f32::vec
 pub fn nobonk::api::PhysicsWorldApi::push_circle(&mut self, center: glam::f32::vec2::Vec2, radius: f32, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, user_key: core::option::Option<nobonk::ColKey>) -> nobonk::FrameId
 pub fn nobonk::api::PhysicsWorldApi::push_point(&mut self, p: glam::f32::vec2::Vec2, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, user_key: core::option::Option<nobonk::ColKey>) -> nobonk::FrameId
 pub fn nobonk::api::PhysicsWorldApi::query_aabb(&self, center: glam::f32::vec2::Vec2, half_extents: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::api::PhysicsWorldApi::query_aabb_all(&self, center: glam::f32::vec2::Vec2, half_extents: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::BodyRef, core::option::Option<nobonk::ColKey>)>
 pub fn nobonk::api::PhysicsWorldApi::query_circle(&self, center: glam::f32::vec2::Vec2, radius: f32, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::api::PhysicsWorldApi::query_circle_all(&self, center: glam::f32::vec2::Vec2, radius: f32, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::BodyRef, core::option::Option<nobonk::ColKey>)>
 pub fn nobonk::api::PhysicsWorldApi::query_point(&self, p: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::api::PhysicsWorldApi::query_point_all(&self, p: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::BodyRef, core::option::Option<nobonk::ColKey>)>
 pub fn nobonk::api::PhysicsWorldApi::raycast(&self, origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, max_t: f32) -> core::option::Option<(nobonk::FrameId, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::api::PhysicsWorldApi::raycast_all(&self, origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, max_t: f32) -> core::option::Option<(nobonk::BodyRef, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::api::PhysicsWorldApi::raycast_tiles(&self, origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, max_t: f32, mask: nobonk::LayerMask) -> core::option::Option<(nobonk::TileRef, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::api::PhysicsWorldApi::sweep_aabb_tiles(&self, center: glam::f32::vec2::Vec2, half_extents: glam::f32::vec2::Vec2, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> core::option::Option<(nobonk::TileRef, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
 pub fn nobonk::api::PhysicsWorldApi::sweep_by_key(&self, a: nobonk::ColKey, b: nobonk::ColKey) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::api::PhysicsWorldApi::sweep_circle_tiles(&self, center: glam::f32::vec2::Vec2, radius: f32, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> core::option::Option<(nobonk::TileRef, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
 pub fn nobonk::api::PhysicsWorldApi::sweep_pair(&self, a: nobonk::FrameId, b: nobonk::FrameId) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::api::PhysicsWorldApi::update_tiles(&mut self, map: nobonk::TileMapRef, changed_rect: (u32, u32, u32, u32), data: &[u8])
 impl nobonk::PhysicsWorldApi for nobonk::world::PhysicsWorld
+pub fn nobonk::world::PhysicsWorld::attach_tilemap(&mut self, desc: nobonk::TileMapDesc<'_>) -> nobonk::TileMapRef
 pub fn nobonk::world::PhysicsWorld::begin_frame(&mut self)
+pub fn nobonk::world::PhysicsWorld::detach_tilemap(&mut self, map: nobonk::TileMapRef)
 pub fn nobonk::world::PhysicsWorld::drain_events(&mut self) -> alloc::vec::Vec<nobonk::Event>
 pub fn nobonk::world::PhysicsWorld::end_frame(&mut self)
 pub fn nobonk::world::PhysicsWorld::generate_events(&mut self)
@@ -55,14 +71,24 @@ pub fn nobonk::world::PhysicsWorld::push_aabb(&mut self, center: glam::f32::vec2
 pub fn nobonk::world::PhysicsWorld::push_circle(&mut self, center: glam::f32::vec2::Vec2, radius: f32, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, user_key: core::option::Option<nobonk::ColKey>) -> nobonk::FrameId
 pub fn nobonk::world::PhysicsWorld::push_point(&mut self, p: glam::f32::vec2::Vec2, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, user_key: core::option::Option<nobonk::ColKey>) -> nobonk::FrameId
 pub fn nobonk::world::PhysicsWorld::query_aabb(&self, center: glam::f32::vec2::Vec2, half_extents: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::query_aabb_all(&self, center: glam::f32::vec2::Vec2, half_extents: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::BodyRef, core::option::Option<nobonk::ColKey>)>
 pub fn nobonk::world::PhysicsWorld::query_circle(&self, center: glam::f32::vec2::Vec2, radius: f32, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::query_circle_all(&self, center: glam::f32::vec2::Vec2, radius: f32, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::BodyRef, core::option::Option<nobonk::ColKey>)>
 pub fn nobonk::world::PhysicsWorld::query_point(&self, p: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::query_point_all(&self, p: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::BodyRef, core::option::Option<nobonk::ColKey>)>
 pub fn nobonk::world::PhysicsWorld::raycast(&self, origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, max_t: f32) -> core::option::Option<(nobonk::FrameId, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::raycast_all(&self, origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, max_t: f32) -> core::option::Option<(nobonk::BodyRef, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::raycast_tiles(&self, origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, max_t: f32, mask: nobonk::LayerMask) -> core::option::Option<(nobonk::TileRef, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::sweep_aabb_tiles(&self, center: glam::f32::vec2::Vec2, half_extents: glam::f32::vec2::Vec2, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> core::option::Option<(nobonk::TileRef, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
 pub fn nobonk::world::PhysicsWorld::sweep_by_key(&self, a: nobonk::ColKey, b: nobonk::ColKey) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::world::PhysicsWorld::sweep_circle_tiles(&self, center: glam::f32::vec2::Vec2, radius: f32, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> core::option::Option<(nobonk::TileRef, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
 pub fn nobonk::world::PhysicsWorld::sweep_pair(&self, a: nobonk::FrameId, b: nobonk::FrameId) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::world::PhysicsWorld::update_tiles(&mut self, map: nobonk::TileMapRef, changed_rect: (u32, u32, u32, u32), data: &[u8])
 pub mod nobonk::narrowphase
 pub struct nobonk::narrowphase::Narrowphase
 impl nobonk::NarrowphaseApi for nobonk::narrowphase::Narrowphase
+pub fn nobonk::narrowphase::Narrowphase::aabb_tile_pushout(c: glam::f32::vec2::Vec2, he: glam::f32::vec2::Vec2, tile_min: glam::f32::vec2::Vec2, cell: f32) -> (glam::f32::vec2::Vec2, f32, glam::f32::vec2::Vec2)
+pub fn nobonk::narrowphase::Narrowphase::circle_tile_pushout(c: glam::f32::vec2::Vec2, r: f32, tile_min: glam::f32::vec2::Vec2, cell: f32) -> (glam::f32::vec2::Vec2, f32, glam::f32::vec2::Vec2)
 pub fn nobonk::narrowphase::Narrowphase::line_segment_aabb(a: glam::f32::vec2::Vec2, b: glam::f32::vec2::Vec2, aabb_min: glam::f32::vec2::Vec2, aabb_max: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
 pub fn nobonk::narrowphase::Narrowphase::line_segment_circle(a: glam::f32::vec2::Vec2, b: glam::f32::vec2::Vec2, center: glam::f32::vec2::Vec2, r: f32) -> core::option::Option<nobonk::SweepHit>
 pub fn nobonk::narrowphase::Narrowphase::overlap_aabb_aabb(c0: glam::f32::vec2::Vec2, h0: glam::f32::vec2::Vec2, c1: glam::f32::vec2::Vec2, h1: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::Overlap>
@@ -81,6 +107,26 @@ impl core::marker::Unpin for nobonk::narrowphase::Narrowphase
 impl core::panic::unwind_safe::RefUnwindSafe for nobonk::narrowphase::Narrowphase
 impl core::panic::unwind_safe::UnwindSafe for nobonk::narrowphase::Narrowphase
 pub mod nobonk::types
+pub enum nobonk::types::BodyRef
+pub nobonk::types::BodyRef::Collider(nobonk::FrameId)
+pub nobonk::types::BodyRef::Tile(nobonk::TileRef)
+impl core::clone::Clone for nobonk::BodyRef
+pub fn nobonk::BodyRef::clone(&self) -> nobonk::BodyRef
+impl core::cmp::Eq for nobonk::BodyRef
+impl core::cmp::PartialEq for nobonk::BodyRef
+pub fn nobonk::BodyRef::eq(&self, other: &nobonk::BodyRef) -> bool
+impl core::fmt::Debug for nobonk::BodyRef
+pub fn nobonk::BodyRef::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for nobonk::BodyRef
+pub fn nobonk::BodyRef::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for nobonk::BodyRef
+impl core::marker::StructuralPartialEq for nobonk::BodyRef
+impl core::marker::Freeze for nobonk::BodyRef
+impl core::marker::Send for nobonk::BodyRef
+impl core::marker::Sync for nobonk::BodyRef
+impl core::marker::Unpin for nobonk::BodyRef
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::BodyRef
+impl core::panic::unwind_safe::UnwindSafe for nobonk::BodyRef
 pub enum nobonk::types::ColliderKind
 pub nobonk::types::ColliderKind::Aabb
 pub nobonk::types::ColliderKind::Aabb::half_extents: glam::f32::vec2::Vec2
@@ -129,9 +175,9 @@ impl core::marker::Unpin for nobonk::ColliderDesc
 impl core::panic::unwind_safe::RefUnwindSafe for nobonk::ColliderDesc
 impl core::panic::unwind_safe::UnwindSafe for nobonk::ColliderDesc
 pub struct nobonk::types::Event
-pub nobonk::types::Event::a: nobonk::FrameId
+pub nobonk::types::Event::a: nobonk::BodyRef
 pub nobonk::types::Event::a_key: core::option::Option<nobonk::ColKey>
-pub nobonk::types::Event::b: nobonk::FrameId
+pub nobonk::types::Event::b: nobonk::BodyRef
 pub nobonk::types::Event::b_key: core::option::Option<nobonk::ColKey>
 pub nobonk::types::Event::kind: nobonk::EventKind
 pub nobonk::types::Event::overlap: core::option::Option<nobonk::Overlap>
@@ -207,6 +253,7 @@ impl core::panic::unwind_safe::UnwindSafe for nobonk::Motion
 pub struct nobonk::types::Overlap
 pub nobonk::types::Overlap::contact: glam::f32::vec2::Vec2
 pub nobonk::types::Overlap::depth: f32
+pub nobonk::types::Overlap::hint: nobonk::ResolutionHint
 pub nobonk::types::Overlap::normal: glam::f32::vec2::Vec2
 impl core::clone::Clone for nobonk::Overlap
 pub fn nobonk::Overlap::clone(&self) -> nobonk::Overlap
@@ -219,8 +266,26 @@ impl core::marker::Sync for nobonk::Overlap
 impl core::marker::Unpin for nobonk::Overlap
 impl core::panic::unwind_safe::RefUnwindSafe for nobonk::Overlap
 impl core::panic::unwind_safe::UnwindSafe for nobonk::Overlap
+pub struct nobonk::types::ResolutionHint
+pub nobonk::types::ResolutionHint::fully_embedded: bool
+pub nobonk::types::ResolutionHint::safe_pos: core::option::Option<glam::f32::vec2::Vec2>
+pub nobonk::types::ResolutionHint::start_embedded: bool
+impl core::clone::Clone for nobonk::ResolutionHint
+pub fn nobonk::ResolutionHint::clone(&self) -> nobonk::ResolutionHint
+impl core::default::Default for nobonk::ResolutionHint
+pub fn nobonk::ResolutionHint::default() -> nobonk::ResolutionHint
+impl core::fmt::Debug for nobonk::ResolutionHint
+pub fn nobonk::ResolutionHint::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for nobonk::ResolutionHint
+impl core::marker::Freeze for nobonk::ResolutionHint
+impl core::marker::Send for nobonk::ResolutionHint
+impl core::marker::Sync for nobonk::ResolutionHint
+impl core::marker::Unpin for nobonk::ResolutionHint
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::ResolutionHint
+impl core::panic::unwind_safe::UnwindSafe for nobonk::ResolutionHint
 pub struct nobonk::types::SweepHit
 pub nobonk::types::SweepHit::contact: glam::f32::vec2::Vec2
+pub nobonk::types::SweepHit::hint: nobonk::ResolutionHint
 pub nobonk::types::SweepHit::normal: glam::f32::vec2::Vec2
 pub nobonk::types::SweepHit::toi: f32
 impl core::clone::Clone for nobonk::SweepHit
@@ -234,6 +299,62 @@ impl core::marker::Sync for nobonk::SweepHit
 impl core::marker::Unpin for nobonk::SweepHit
 impl core::panic::unwind_safe::RefUnwindSafe for nobonk::SweepHit
 impl core::panic::unwind_safe::UnwindSafe for nobonk::SweepHit
+pub struct nobonk::types::TileMapDesc<'a>
+pub nobonk::types::TileMapDesc::cell: f32
+pub nobonk::types::TileMapDesc::height: u32
+pub nobonk::types::TileMapDesc::mask: nobonk::LayerMask
+pub nobonk::types::TileMapDesc::origin: glam::f32::vec2::Vec2
+pub nobonk::types::TileMapDesc::solids: &'a [u8]
+pub nobonk::types::TileMapDesc::user_key: core::option::Option<nobonk::ColKey>
+pub nobonk::types::TileMapDesc::width: u32
+impl<'a> core::clone::Clone for nobonk::TileMapDesc<'a>
+pub fn nobonk::TileMapDesc<'a>::clone(&self) -> nobonk::TileMapDesc<'a>
+impl<'a> core::fmt::Debug for nobonk::TileMapDesc<'a>
+pub fn nobonk::TileMapDesc<'a>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'a> core::marker::Freeze for nobonk::TileMapDesc<'a>
+impl<'a> core::marker::Send for nobonk::TileMapDesc<'a>
+impl<'a> core::marker::Sync for nobonk::TileMapDesc<'a>
+impl<'a> core::marker::Unpin for nobonk::TileMapDesc<'a>
+impl<'a> core::panic::unwind_safe::RefUnwindSafe for nobonk::TileMapDesc<'a>
+impl<'a> core::panic::unwind_safe::UnwindSafe for nobonk::TileMapDesc<'a>
+pub struct nobonk::types::TileMapRef(pub u32)
+impl core::clone::Clone for nobonk::TileMapRef
+pub fn nobonk::TileMapRef::clone(&self) -> nobonk::TileMapRef
+impl core::cmp::Eq for nobonk::TileMapRef
+impl core::cmp::PartialEq for nobonk::TileMapRef
+pub fn nobonk::TileMapRef::eq(&self, other: &nobonk::TileMapRef) -> bool
+impl core::fmt::Debug for nobonk::TileMapRef
+pub fn nobonk::TileMapRef::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for nobonk::TileMapRef
+pub fn nobonk::TileMapRef::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for nobonk::TileMapRef
+impl core::marker::StructuralPartialEq for nobonk::TileMapRef
+impl core::marker::Freeze for nobonk::TileMapRef
+impl core::marker::Send for nobonk::TileMapRef
+impl core::marker::Sync for nobonk::TileMapRef
+impl core::marker::Unpin for nobonk::TileMapRef
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::TileMapRef
+impl core::panic::unwind_safe::UnwindSafe for nobonk::TileMapRef
+pub struct nobonk::types::TileRef
+pub nobonk::types::TileRef::cell_xy: glam::u32::uvec2::UVec2
+pub nobonk::types::TileRef::map: nobonk::TileMapRef
+impl core::clone::Clone for nobonk::TileRef
+pub fn nobonk::TileRef::clone(&self) -> nobonk::TileRef
+impl core::cmp::Eq for nobonk::TileRef
+impl core::cmp::PartialEq for nobonk::TileRef
+pub fn nobonk::TileRef::eq(&self, other: &nobonk::TileRef) -> bool
+impl core::fmt::Debug for nobonk::TileRef
+pub fn nobonk::TileRef::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for nobonk::TileRef
+pub fn nobonk::TileRef::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for nobonk::TileRef
+impl core::marker::StructuralPartialEq for nobonk::TileRef
+impl core::marker::Freeze for nobonk::TileRef
+impl core::marker::Send for nobonk::TileRef
+impl core::marker::Sync for nobonk::TileRef
+impl core::marker::Unpin for nobonk::TileRef
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::TileRef
+impl core::panic::unwind_safe::UnwindSafe for nobonk::TileRef
 pub struct nobonk::types::WorldConfig
 pub nobonk::types::WorldConfig::cell_size: f32
 pub nobonk::types::WorldConfig::dt: f32
@@ -241,7 +362,9 @@ pub nobonk::types::WorldConfig::enable_overlap_events: bool
 pub nobonk::types::WorldConfig::enable_sweep_events: bool
 pub nobonk::types::WorldConfig::enable_timing: bool
 pub nobonk::types::WorldConfig::max_events: usize
+pub nobonk::types::WorldConfig::require_mutual_consent: bool
 pub nobonk::types::WorldConfig::tighten_swept_aabb: bool
+pub nobonk::types::WorldConfig::tile_eps: f32
 impl core::clone::Clone for nobonk::WorldConfig
 pub fn nobonk::WorldConfig::clone(&self) -> nobonk::WorldConfig
 impl core::fmt::Debug for nobonk::WorldConfig
@@ -300,7 +423,9 @@ impl nobonk::world::PhysicsWorld
 pub fn nobonk::world::PhysicsWorld::debug_stats(&self) -> nobonk::WorldStats
 pub fn nobonk::world::PhysicsWorld::timing(&self) -> core::option::Option<nobonk::WorldTiming>
 impl nobonk::PhysicsWorldApi for nobonk::world::PhysicsWorld
+pub fn nobonk::world::PhysicsWorld::attach_tilemap(&mut self, desc: nobonk::TileMapDesc<'_>) -> nobonk::TileMapRef
 pub fn nobonk::world::PhysicsWorld::begin_frame(&mut self)
+pub fn nobonk::world::PhysicsWorld::detach_tilemap(&mut self, map: nobonk::TileMapRef)
 pub fn nobonk::world::PhysicsWorld::drain_events(&mut self) -> alloc::vec::Vec<nobonk::Event>
 pub fn nobonk::world::PhysicsWorld::end_frame(&mut self)
 pub fn nobonk::world::PhysicsWorld::generate_events(&mut self)
@@ -312,17 +437,45 @@ pub fn nobonk::world::PhysicsWorld::push_aabb(&mut self, center: glam::f32::vec2
 pub fn nobonk::world::PhysicsWorld::push_circle(&mut self, center: glam::f32::vec2::Vec2, radius: f32, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, user_key: core::option::Option<nobonk::ColKey>) -> nobonk::FrameId
 pub fn nobonk::world::PhysicsWorld::push_point(&mut self, p: glam::f32::vec2::Vec2, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, user_key: core::option::Option<nobonk::ColKey>) -> nobonk::FrameId
 pub fn nobonk::world::PhysicsWorld::query_aabb(&self, center: glam::f32::vec2::Vec2, half_extents: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::query_aabb_all(&self, center: glam::f32::vec2::Vec2, half_extents: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::BodyRef, core::option::Option<nobonk::ColKey>)>
 pub fn nobonk::world::PhysicsWorld::query_circle(&self, center: glam::f32::vec2::Vec2, radius: f32, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::query_circle_all(&self, center: glam::f32::vec2::Vec2, radius: f32, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::BodyRef, core::option::Option<nobonk::ColKey>)>
 pub fn nobonk::world::PhysicsWorld::query_point(&self, p: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::query_point_all(&self, p: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::BodyRef, core::option::Option<nobonk::ColKey>)>
 pub fn nobonk::world::PhysicsWorld::raycast(&self, origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, max_t: f32) -> core::option::Option<(nobonk::FrameId, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::raycast_all(&self, origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, max_t: f32) -> core::option::Option<(nobonk::BodyRef, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::raycast_tiles(&self, origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, max_t: f32, mask: nobonk::LayerMask) -> core::option::Option<(nobonk::TileRef, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::sweep_aabb_tiles(&self, center: glam::f32::vec2::Vec2, half_extents: glam::f32::vec2::Vec2, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> core::option::Option<(nobonk::TileRef, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
 pub fn nobonk::world::PhysicsWorld::sweep_by_key(&self, a: nobonk::ColKey, b: nobonk::ColKey) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::world::PhysicsWorld::sweep_circle_tiles(&self, center: glam::f32::vec2::Vec2, radius: f32, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> core::option::Option<(nobonk::TileRef, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
 pub fn nobonk::world::PhysicsWorld::sweep_pair(&self, a: nobonk::FrameId, b: nobonk::FrameId) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::world::PhysicsWorld::update_tiles(&mut self, map: nobonk::TileMapRef, changed_rect: (u32, u32, u32, u32), data: &[u8])
 impl core::marker::Freeze for nobonk::world::PhysicsWorld
 impl core::marker::Send for nobonk::world::PhysicsWorld
 impl core::marker::Sync for nobonk::world::PhysicsWorld
 impl core::marker::Unpin for nobonk::world::PhysicsWorld
 impl core::panic::unwind_safe::RefUnwindSafe for nobonk::world::PhysicsWorld
 impl core::panic::unwind_safe::UnwindSafe for nobonk::world::PhysicsWorld
+pub enum nobonk::BodyRef
+pub nobonk::BodyRef::Collider(nobonk::FrameId)
+pub nobonk::BodyRef::Tile(nobonk::TileRef)
+impl core::clone::Clone for nobonk::BodyRef
+pub fn nobonk::BodyRef::clone(&self) -> nobonk::BodyRef
+impl core::cmp::Eq for nobonk::BodyRef
+impl core::cmp::PartialEq for nobonk::BodyRef
+pub fn nobonk::BodyRef::eq(&self, other: &nobonk::BodyRef) -> bool
+impl core::fmt::Debug for nobonk::BodyRef
+pub fn nobonk::BodyRef::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for nobonk::BodyRef
+pub fn nobonk::BodyRef::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for nobonk::BodyRef
+impl core::marker::StructuralPartialEq for nobonk::BodyRef
+impl core::marker::Freeze for nobonk::BodyRef
+impl core::marker::Send for nobonk::BodyRef
+impl core::marker::Sync for nobonk::BodyRef
+impl core::marker::Unpin for nobonk::BodyRef
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::BodyRef
+impl core::panic::unwind_safe::UnwindSafe for nobonk::BodyRef
 pub enum nobonk::ColliderKind
 pub nobonk::ColliderKind::Aabb
 pub nobonk::ColliderKind::Aabb::half_extents: glam::f32::vec2::Vec2
@@ -371,9 +524,9 @@ impl core::marker::Unpin for nobonk::ColliderDesc
 impl core::panic::unwind_safe::RefUnwindSafe for nobonk::ColliderDesc
 impl core::panic::unwind_safe::UnwindSafe for nobonk::ColliderDesc
 pub struct nobonk::Event
-pub nobonk::Event::a: nobonk::FrameId
+pub nobonk::Event::a: nobonk::BodyRef
 pub nobonk::Event::a_key: core::option::Option<nobonk::ColKey>
-pub nobonk::Event::b: nobonk::FrameId
+pub nobonk::Event::b: nobonk::BodyRef
 pub nobonk::Event::b_key: core::option::Option<nobonk::ColKey>
 pub nobonk::Event::kind: nobonk::EventKind
 pub nobonk::Event::overlap: core::option::Option<nobonk::Overlap>
@@ -449,6 +602,7 @@ impl core::panic::unwind_safe::UnwindSafe for nobonk::Motion
 pub struct nobonk::Overlap
 pub nobonk::Overlap::contact: glam::f32::vec2::Vec2
 pub nobonk::Overlap::depth: f32
+pub nobonk::Overlap::hint: nobonk::ResolutionHint
 pub nobonk::Overlap::normal: glam::f32::vec2::Vec2
 impl core::clone::Clone for nobonk::Overlap
 pub fn nobonk::Overlap::clone(&self) -> nobonk::Overlap
@@ -468,7 +622,9 @@ impl nobonk::world::PhysicsWorld
 pub fn nobonk::world::PhysicsWorld::debug_stats(&self) -> nobonk::WorldStats
 pub fn nobonk::world::PhysicsWorld::timing(&self) -> core::option::Option<nobonk::WorldTiming>
 impl nobonk::PhysicsWorldApi for nobonk::world::PhysicsWorld
+pub fn nobonk::world::PhysicsWorld::attach_tilemap(&mut self, desc: nobonk::TileMapDesc<'_>) -> nobonk::TileMapRef
 pub fn nobonk::world::PhysicsWorld::begin_frame(&mut self)
+pub fn nobonk::world::PhysicsWorld::detach_tilemap(&mut self, map: nobonk::TileMapRef)
 pub fn nobonk::world::PhysicsWorld::drain_events(&mut self) -> alloc::vec::Vec<nobonk::Event>
 pub fn nobonk::world::PhysicsWorld::end_frame(&mut self)
 pub fn nobonk::world::PhysicsWorld::generate_events(&mut self)
@@ -480,19 +636,45 @@ pub fn nobonk::world::PhysicsWorld::push_aabb(&mut self, center: glam::f32::vec2
 pub fn nobonk::world::PhysicsWorld::push_circle(&mut self, center: glam::f32::vec2::Vec2, radius: f32, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, user_key: core::option::Option<nobonk::ColKey>) -> nobonk::FrameId
 pub fn nobonk::world::PhysicsWorld::push_point(&mut self, p: glam::f32::vec2::Vec2, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, user_key: core::option::Option<nobonk::ColKey>) -> nobonk::FrameId
 pub fn nobonk::world::PhysicsWorld::query_aabb(&self, center: glam::f32::vec2::Vec2, half_extents: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::query_aabb_all(&self, center: glam::f32::vec2::Vec2, half_extents: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::BodyRef, core::option::Option<nobonk::ColKey>)>
 pub fn nobonk::world::PhysicsWorld::query_circle(&self, center: glam::f32::vec2::Vec2, radius: f32, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::query_circle_all(&self, center: glam::f32::vec2::Vec2, radius: f32, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::BodyRef, core::option::Option<nobonk::ColKey>)>
 pub fn nobonk::world::PhysicsWorld::query_point(&self, p: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::query_point_all(&self, p: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::BodyRef, core::option::Option<nobonk::ColKey>)>
 pub fn nobonk::world::PhysicsWorld::raycast(&self, origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, max_t: f32) -> core::option::Option<(nobonk::FrameId, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::raycast_all(&self, origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, max_t: f32) -> core::option::Option<(nobonk::BodyRef, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::raycast_tiles(&self, origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, max_t: f32, mask: nobonk::LayerMask) -> core::option::Option<(nobonk::TileRef, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::sweep_aabb_tiles(&self, center: glam::f32::vec2::Vec2, half_extents: glam::f32::vec2::Vec2, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> core::option::Option<(nobonk::TileRef, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
 pub fn nobonk::world::PhysicsWorld::sweep_by_key(&self, a: nobonk::ColKey, b: nobonk::ColKey) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::world::PhysicsWorld::sweep_circle_tiles(&self, center: glam::f32::vec2::Vec2, radius: f32, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> core::option::Option<(nobonk::TileRef, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
 pub fn nobonk::world::PhysicsWorld::sweep_pair(&self, a: nobonk::FrameId, b: nobonk::FrameId) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::world::PhysicsWorld::update_tiles(&mut self, map: nobonk::TileMapRef, changed_rect: (u32, u32, u32, u32), data: &[u8])
 impl core::marker::Freeze for nobonk::world::PhysicsWorld
 impl core::marker::Send for nobonk::world::PhysicsWorld
 impl core::marker::Sync for nobonk::world::PhysicsWorld
 impl core::marker::Unpin for nobonk::world::PhysicsWorld
 impl core::panic::unwind_safe::RefUnwindSafe for nobonk::world::PhysicsWorld
 impl core::panic::unwind_safe::UnwindSafe for nobonk::world::PhysicsWorld
+pub struct nobonk::ResolutionHint
+pub nobonk::ResolutionHint::fully_embedded: bool
+pub nobonk::ResolutionHint::safe_pos: core::option::Option<glam::f32::vec2::Vec2>
+pub nobonk::ResolutionHint::start_embedded: bool
+impl core::clone::Clone for nobonk::ResolutionHint
+pub fn nobonk::ResolutionHint::clone(&self) -> nobonk::ResolutionHint
+impl core::default::Default for nobonk::ResolutionHint
+pub fn nobonk::ResolutionHint::default() -> nobonk::ResolutionHint
+impl core::fmt::Debug for nobonk::ResolutionHint
+pub fn nobonk::ResolutionHint::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for nobonk::ResolutionHint
+impl core::marker::Freeze for nobonk::ResolutionHint
+impl core::marker::Send for nobonk::ResolutionHint
+impl core::marker::Sync for nobonk::ResolutionHint
+impl core::marker::Unpin for nobonk::ResolutionHint
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::ResolutionHint
+impl core::panic::unwind_safe::UnwindSafe for nobonk::ResolutionHint
 pub struct nobonk::SweepHit
 pub nobonk::SweepHit::contact: glam::f32::vec2::Vec2
+pub nobonk::SweepHit::hint: nobonk::ResolutionHint
 pub nobonk::SweepHit::normal: glam::f32::vec2::Vec2
 pub nobonk::SweepHit::toi: f32
 impl core::clone::Clone for nobonk::SweepHit
@@ -506,6 +688,62 @@ impl core::marker::Sync for nobonk::SweepHit
 impl core::marker::Unpin for nobonk::SweepHit
 impl core::panic::unwind_safe::RefUnwindSafe for nobonk::SweepHit
 impl core::panic::unwind_safe::UnwindSafe for nobonk::SweepHit
+pub struct nobonk::TileMapDesc<'a>
+pub nobonk::TileMapDesc::cell: f32
+pub nobonk::TileMapDesc::height: u32
+pub nobonk::TileMapDesc::mask: nobonk::LayerMask
+pub nobonk::TileMapDesc::origin: glam::f32::vec2::Vec2
+pub nobonk::TileMapDesc::solids: &'a [u8]
+pub nobonk::TileMapDesc::user_key: core::option::Option<nobonk::ColKey>
+pub nobonk::TileMapDesc::width: u32
+impl<'a> core::clone::Clone for nobonk::TileMapDesc<'a>
+pub fn nobonk::TileMapDesc<'a>::clone(&self) -> nobonk::TileMapDesc<'a>
+impl<'a> core::fmt::Debug for nobonk::TileMapDesc<'a>
+pub fn nobonk::TileMapDesc<'a>::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl<'a> core::marker::Freeze for nobonk::TileMapDesc<'a>
+impl<'a> core::marker::Send for nobonk::TileMapDesc<'a>
+impl<'a> core::marker::Sync for nobonk::TileMapDesc<'a>
+impl<'a> core::marker::Unpin for nobonk::TileMapDesc<'a>
+impl<'a> core::panic::unwind_safe::RefUnwindSafe for nobonk::TileMapDesc<'a>
+impl<'a> core::panic::unwind_safe::UnwindSafe for nobonk::TileMapDesc<'a>
+pub struct nobonk::TileMapRef(pub u32)
+impl core::clone::Clone for nobonk::TileMapRef
+pub fn nobonk::TileMapRef::clone(&self) -> nobonk::TileMapRef
+impl core::cmp::Eq for nobonk::TileMapRef
+impl core::cmp::PartialEq for nobonk::TileMapRef
+pub fn nobonk::TileMapRef::eq(&self, other: &nobonk::TileMapRef) -> bool
+impl core::fmt::Debug for nobonk::TileMapRef
+pub fn nobonk::TileMapRef::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for nobonk::TileMapRef
+pub fn nobonk::TileMapRef::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for nobonk::TileMapRef
+impl core::marker::StructuralPartialEq for nobonk::TileMapRef
+impl core::marker::Freeze for nobonk::TileMapRef
+impl core::marker::Send for nobonk::TileMapRef
+impl core::marker::Sync for nobonk::TileMapRef
+impl core::marker::Unpin for nobonk::TileMapRef
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::TileMapRef
+impl core::panic::unwind_safe::UnwindSafe for nobonk::TileMapRef
+pub struct nobonk::TileRef
+pub nobonk::TileRef::cell_xy: glam::u32::uvec2::UVec2
+pub nobonk::TileRef::map: nobonk::TileMapRef
+impl core::clone::Clone for nobonk::TileRef
+pub fn nobonk::TileRef::clone(&self) -> nobonk::TileRef
+impl core::cmp::Eq for nobonk::TileRef
+impl core::cmp::PartialEq for nobonk::TileRef
+pub fn nobonk::TileRef::eq(&self, other: &nobonk::TileRef) -> bool
+impl core::fmt::Debug for nobonk::TileRef
+pub fn nobonk::TileRef::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for nobonk::TileRef
+pub fn nobonk::TileRef::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for nobonk::TileRef
+impl core::marker::StructuralPartialEq for nobonk::TileRef
+impl core::marker::Freeze for nobonk::TileRef
+impl core::marker::Send for nobonk::TileRef
+impl core::marker::Sync for nobonk::TileRef
+impl core::marker::Unpin for nobonk::TileRef
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::TileRef
+impl core::panic::unwind_safe::UnwindSafe for nobonk::TileRef
 pub struct nobonk::WorldConfig
 pub nobonk::WorldConfig::cell_size: f32
 pub nobonk::WorldConfig::dt: f32
@@ -513,7 +751,9 @@ pub nobonk::WorldConfig::enable_overlap_events: bool
 pub nobonk::WorldConfig::enable_sweep_events: bool
 pub nobonk::WorldConfig::enable_timing: bool
 pub nobonk::WorldConfig::max_events: usize
+pub nobonk::WorldConfig::require_mutual_consent: bool
 pub nobonk::WorldConfig::tighten_swept_aabb: bool
+pub nobonk::WorldConfig::tile_eps: f32
 impl core::clone::Clone for nobonk::WorldConfig
 pub fn nobonk::WorldConfig::clone(&self) -> nobonk::WorldConfig
 impl core::fmt::Debug for nobonk::WorldConfig
@@ -564,6 +804,8 @@ impl core::marker::Unpin for nobonk::WorldTiming
 impl core::panic::unwind_safe::RefUnwindSafe for nobonk::WorldTiming
 impl core::panic::unwind_safe::UnwindSafe for nobonk::WorldTiming
 pub trait nobonk::NarrowphaseApi
+pub fn nobonk::NarrowphaseApi::aabb_tile_pushout(c: glam::f32::vec2::Vec2, he: glam::f32::vec2::Vec2, tile_min: glam::f32::vec2::Vec2, cell: f32) -> (glam::f32::vec2::Vec2, f32, glam::f32::vec2::Vec2)
+pub fn nobonk::NarrowphaseApi::circle_tile_pushout(c: glam::f32::vec2::Vec2, r: f32, tile_min: glam::f32::vec2::Vec2, cell: f32) -> (glam::f32::vec2::Vec2, f32, glam::f32::vec2::Vec2)
 pub fn nobonk::NarrowphaseApi::line_segment_aabb(a: glam::f32::vec2::Vec2, b: glam::f32::vec2::Vec2, aabb_min: glam::f32::vec2::Vec2, aabb_max: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
 pub fn nobonk::NarrowphaseApi::line_segment_circle(a: glam::f32::vec2::Vec2, b: glam::f32::vec2::Vec2, center: glam::f32::vec2::Vec2, r: f32) -> core::option::Option<nobonk::SweepHit>
 pub fn nobonk::NarrowphaseApi::overlap_aabb_aabb(c0: glam::f32::vec2::Vec2, h0: glam::f32::vec2::Vec2, c1: glam::f32::vec2::Vec2, h1: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::Overlap>
@@ -576,6 +818,8 @@ pub fn nobonk::NarrowphaseApi::sweep_aabb_aabb(c0: glam::f32::vec2::Vec2, h0: gl
 pub fn nobonk::NarrowphaseApi::sweep_circle_aabb(c: glam::f32::vec2::Vec2, r: f32, v: glam::f32::vec2::Vec2, box_c: glam::f32::vec2::Vec2, box_h: glam::f32::vec2::Vec2, box_v: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
 pub fn nobonk::NarrowphaseApi::sweep_circle_circle(c0: glam::f32::vec2::Vec2, r0: f32, v0: glam::f32::vec2::Vec2, c1: glam::f32::vec2::Vec2, r1: f32, v1: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
 impl nobonk::NarrowphaseApi for nobonk::narrowphase::Narrowphase
+pub fn nobonk::narrowphase::Narrowphase::aabb_tile_pushout(c: glam::f32::vec2::Vec2, he: glam::f32::vec2::Vec2, tile_min: glam::f32::vec2::Vec2, cell: f32) -> (glam::f32::vec2::Vec2, f32, glam::f32::vec2::Vec2)
+pub fn nobonk::narrowphase::Narrowphase::circle_tile_pushout(c: glam::f32::vec2::Vec2, r: f32, tile_min: glam::f32::vec2::Vec2, cell: f32) -> (glam::f32::vec2::Vec2, f32, glam::f32::vec2::Vec2)
 pub fn nobonk::narrowphase::Narrowphase::line_segment_aabb(a: glam::f32::vec2::Vec2, b: glam::f32::vec2::Vec2, aabb_min: glam::f32::vec2::Vec2, aabb_max: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
 pub fn nobonk::narrowphase::Narrowphase::line_segment_circle(a: glam::f32::vec2::Vec2, b: glam::f32::vec2::Vec2, center: glam::f32::vec2::Vec2, r: f32) -> core::option::Option<nobonk::SweepHit>
 pub fn nobonk::narrowphase::Narrowphase::overlap_aabb_aabb(c0: glam::f32::vec2::Vec2, h0: glam::f32::vec2::Vec2, c1: glam::f32::vec2::Vec2, h1: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::Overlap>
@@ -588,7 +832,9 @@ pub fn nobonk::narrowphase::Narrowphase::sweep_aabb_aabb(c0: glam::f32::vec2::Ve
 pub fn nobonk::narrowphase::Narrowphase::sweep_circle_aabb(c: glam::f32::vec2::Vec2, r: f32, v: glam::f32::vec2::Vec2, box_c: glam::f32::vec2::Vec2, box_h: glam::f32::vec2::Vec2, box_v: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
 pub fn nobonk::narrowphase::Narrowphase::sweep_circle_circle(c0: glam::f32::vec2::Vec2, r0: f32, v0: glam::f32::vec2::Vec2, c1: glam::f32::vec2::Vec2, r1: f32, v1: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
 pub trait nobonk::PhysicsWorldApi
+pub fn nobonk::PhysicsWorldApi::attach_tilemap(&mut self, desc: nobonk::TileMapDesc<'_>) -> nobonk::TileMapRef
 pub fn nobonk::PhysicsWorldApi::begin_frame(&mut self)
+pub fn nobonk::PhysicsWorldApi::detach_tilemap(&mut self, map: nobonk::TileMapRef)
 pub fn nobonk::PhysicsWorldApi::drain_events(&mut self) -> alloc::vec::Vec<nobonk::Event>
 pub fn nobonk::PhysicsWorldApi::end_frame(&mut self)
 pub fn nobonk::PhysicsWorldApi::generate_events(&mut self)
@@ -600,13 +846,23 @@ pub fn nobonk::PhysicsWorldApi::push_aabb(&mut self, center: glam::f32::vec2::Ve
 pub fn nobonk::PhysicsWorldApi::push_circle(&mut self, center: glam::f32::vec2::Vec2, radius: f32, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, user_key: core::option::Option<nobonk::ColKey>) -> nobonk::FrameId
 pub fn nobonk::PhysicsWorldApi::push_point(&mut self, p: glam::f32::vec2::Vec2, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, user_key: core::option::Option<nobonk::ColKey>) -> nobonk::FrameId
 pub fn nobonk::PhysicsWorldApi::query_aabb(&self, center: glam::f32::vec2::Vec2, half_extents: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::PhysicsWorldApi::query_aabb_all(&self, center: glam::f32::vec2::Vec2, half_extents: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::BodyRef, core::option::Option<nobonk::ColKey>)>
 pub fn nobonk::PhysicsWorldApi::query_circle(&self, center: glam::f32::vec2::Vec2, radius: f32, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::PhysicsWorldApi::query_circle_all(&self, center: glam::f32::vec2::Vec2, radius: f32, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::BodyRef, core::option::Option<nobonk::ColKey>)>
 pub fn nobonk::PhysicsWorldApi::query_point(&self, p: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::PhysicsWorldApi::query_point_all(&self, p: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::BodyRef, core::option::Option<nobonk::ColKey>)>
 pub fn nobonk::PhysicsWorldApi::raycast(&self, origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, max_t: f32) -> core::option::Option<(nobonk::FrameId, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::PhysicsWorldApi::raycast_all(&self, origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, max_t: f32) -> core::option::Option<(nobonk::BodyRef, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::PhysicsWorldApi::raycast_tiles(&self, origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, max_t: f32, mask: nobonk::LayerMask) -> core::option::Option<(nobonk::TileRef, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::PhysicsWorldApi::sweep_aabb_tiles(&self, center: glam::f32::vec2::Vec2, half_extents: glam::f32::vec2::Vec2, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> core::option::Option<(nobonk::TileRef, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
 pub fn nobonk::PhysicsWorldApi::sweep_by_key(&self, a: nobonk::ColKey, b: nobonk::ColKey) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::PhysicsWorldApi::sweep_circle_tiles(&self, center: glam::f32::vec2::Vec2, radius: f32, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> core::option::Option<(nobonk::TileRef, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
 pub fn nobonk::PhysicsWorldApi::sweep_pair(&self, a: nobonk::FrameId, b: nobonk::FrameId) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::PhysicsWorldApi::update_tiles(&mut self, map: nobonk::TileMapRef, changed_rect: (u32, u32, u32, u32), data: &[u8])
 impl nobonk::PhysicsWorldApi for nobonk::world::PhysicsWorld
+pub fn nobonk::world::PhysicsWorld::attach_tilemap(&mut self, desc: nobonk::TileMapDesc<'_>) -> nobonk::TileMapRef
 pub fn nobonk::world::PhysicsWorld::begin_frame(&mut self)
+pub fn nobonk::world::PhysicsWorld::detach_tilemap(&mut self, map: nobonk::TileMapRef)
 pub fn nobonk::world::PhysicsWorld::drain_events(&mut self) -> alloc::vec::Vec<nobonk::Event>
 pub fn nobonk::world::PhysicsWorld::end_frame(&mut self)
 pub fn nobonk::world::PhysicsWorld::generate_events(&mut self)
@@ -618,9 +874,17 @@ pub fn nobonk::world::PhysicsWorld::push_aabb(&mut self, center: glam::f32::vec2
 pub fn nobonk::world::PhysicsWorld::push_circle(&mut self, center: glam::f32::vec2::Vec2, radius: f32, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, user_key: core::option::Option<nobonk::ColKey>) -> nobonk::FrameId
 pub fn nobonk::world::PhysicsWorld::push_point(&mut self, p: glam::f32::vec2::Vec2, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, user_key: core::option::Option<nobonk::ColKey>) -> nobonk::FrameId
 pub fn nobonk::world::PhysicsWorld::query_aabb(&self, center: glam::f32::vec2::Vec2, half_extents: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::query_aabb_all(&self, center: glam::f32::vec2::Vec2, half_extents: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::BodyRef, core::option::Option<nobonk::ColKey>)>
 pub fn nobonk::world::PhysicsWorld::query_circle(&self, center: glam::f32::vec2::Vec2, radius: f32, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::query_circle_all(&self, center: glam::f32::vec2::Vec2, radius: f32, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::BodyRef, core::option::Option<nobonk::ColKey>)>
 pub fn nobonk::world::PhysicsWorld::query_point(&self, p: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::query_point_all(&self, p: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::BodyRef, core::option::Option<nobonk::ColKey>)>
 pub fn nobonk::world::PhysicsWorld::raycast(&self, origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, max_t: f32) -> core::option::Option<(nobonk::FrameId, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::raycast_all(&self, origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, max_t: f32) -> core::option::Option<(nobonk::BodyRef, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::raycast_tiles(&self, origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, max_t: f32, mask: nobonk::LayerMask) -> core::option::Option<(nobonk::TileRef, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::sweep_aabb_tiles(&self, center: glam::f32::vec2::Vec2, half_extents: glam::f32::vec2::Vec2, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> core::option::Option<(nobonk::TileRef, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
 pub fn nobonk::world::PhysicsWorld::sweep_by_key(&self, a: nobonk::ColKey, b: nobonk::ColKey) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::world::PhysicsWorld::sweep_circle_tiles(&self, center: glam::f32::vec2::Vec2, radius: f32, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> core::option::Option<(nobonk::TileRef, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
 pub fn nobonk::world::PhysicsWorld::sweep_pair(&self, a: nobonk::FrameId, b: nobonk::FrameId) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::world::PhysicsWorld::update_tiles(&mut self, map: nobonk::TileMapRef, changed_rect: (u32, u32, u32, u32), data: &[u8])
 pub type nobonk::ColKey = u64

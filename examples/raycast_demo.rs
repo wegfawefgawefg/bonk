@@ -10,6 +10,8 @@ fn main() {
         enable_sweep_events: false,
         max_events: 0,
         enable_timing: false,
+        tile_eps: 1e-4,
+        require_mutual_consent: true,
     });
 
     world.begin_frame();

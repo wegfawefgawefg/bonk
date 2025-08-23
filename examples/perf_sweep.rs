@@ -15,6 +15,8 @@ fn build_world(n: usize, cs: f32, tighten: bool, seed0: u32) -> (PhysicsWorld, u
         enable_sweep_events: true,
         max_events: usize::MAX / 4,
         enable_timing: true,
+        tile_eps: 1e-4,
+        require_mutual_consent: true,
     });
     let mut seed = seed0;
     let mask = LayerMask::simple(1, 1);
