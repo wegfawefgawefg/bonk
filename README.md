@@ -177,6 +177,13 @@ if let Some((_tile, hit, _)) = world.sweep_aabb_tiles(Vec2::new(0.2,0.5), Vec2::
 - Tiles use top-left `origin` and square `cell` size. Consent masking applies between collider masks and tilemap mask, honoring `WorldConfig { require_mutual_consent }`.
 - `WorldConfig { tile_eps }` controls the backoff used to compute `hint.safe_pos` in tile sweeps.
 
+### Signed Depth (Tiles)
+
+- Tile pushouts return signed depth:
+  - depth >= 0: overlapping or tangent (0 = just touching)
+  - depth < 0: separated; |depth| is the gap distance (axis metric for AABB, radial for circle)
+- Tip (skin): treat as contact if `depth >= -skin` (e.g., `skin = 0.02`).
+
 ## Run Examples
 
 - `cargo run --example breakout_events`

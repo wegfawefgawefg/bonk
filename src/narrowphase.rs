@@ -349,38 +349,60 @@ impl NarrowphaseApi for Narrowphase {
     }
 
     fn aabb_tile_pushout(c: Vec2, he: Vec2, tile_min: Vec2, cell: f32) -> (Vec2, f32, Vec2) {
-        // Axis-aligned minimal push-out from AABB vs tile cell [min, min+cell]
+        // Signed pushout: positive depth for overlap/tangent, negative for separation (axis metric)
         let tile_max = tile_min + Vec2::splat(cell);
-        // Treat as AABB vs AABB overlap
         let b_c = (tile_min + tile_max) * 0.5;
         let b_h = Vec2::splat(cell * 0.5);
+
+        // Overlap/tangent path uses precise overlap result
         if let Some(ov) = Self::overlap_aabb_aabb(c, he, b_c, b_h) {
-            (ov.normal, ov.depth, ov.contact)
-        } else {
-            (Vec2::ZERO, 0.0, c)
+            return (ov.normal, ov.depth, ov.contact);
         }
+
+        // Separated: compute axis separations and return negative depth
+        let d = c - b_c;
+        let sx = (d.x.abs() - (he.x + b_h.x)).max(0.0);
+        let sy = (d.y.abs() - (he.y + b_h.y)).max(0.0);
+        let axis_x = sx >= sy;
+        let sep = if axis_x { sx } else { sy };
+        let normal = if axis_x {
+            Vec2::new(d.x.signum(), 0.0)
+        } else {
+            Vec2::new(0.0, d.y.signum())
+        };
+        // Contact: closest point on tile to AABB center
+        let minb = b_c - b_h;
+        let maxb = b_c + b_h;
+        let clamp = |v: f32, lo: f32, hi: f32| v.max(lo).min(hi);
+        let contact = Vec2::new(clamp(c.x, minb.x, maxb.x), clamp(c.y, minb.y, maxb.y));
+        (normal, -sep, contact)
     }
 
     fn circle_tile_pushout(c: Vec2, r: f32, tile_min: Vec2, cell: f32) -> (Vec2, f32, Vec2) {
+        // Signed pushout based on closest point to tile AABB
         let tile_max = tile_min + Vec2::splat(cell);
-        // Circle vs AABB: approximate via closest point
         let b_c = (tile_min + tile_max) * 0.5;
         let b_h = Vec2::splat(cell * 0.5);
-        // Compute closest point on tile to circle center
+
+        // Closest point on tile to circle center
         let min = b_c - b_h;
         let max = b_c + b_h;
         let clamp = |v: f32, lo: f32, hi: f32| v.max(lo).min(hi);
         let closest = Vec2::new(clamp(c.x, min.x, max.x), clamp(c.y, min.y, max.y));
+
+        // Signed depth in radial metric
         let delta = c - closest;
         let d2 = delta.length_squared();
+        let d = d2.sqrt();
+
         if d2 <= r * r {
-            let d = d2.sqrt();
-            let normal = if d > 1e-6 { delta / d } else { Vec2::new(1.0, 0.0) };
+            // Overlap/tangent: depth ≥ 0, normal from tile toward circle
+            let normal = if d > 1e-6 { delta / d } else { Vec2::X };
             let depth = (r - d).max(0.0);
-            let contact = closest;
-            (normal, depth, contact)
+            (normal, depth, closest)
         } else {
-            (Vec2::ZERO, 0.0, c)
+            // Separated: depth < 0, normal undefined here -> ZERO
+            (Vec2::ZERO, r - d, closest)
         }
     }
 }
@@ -565,5 +587,43 @@ mod tests {
         assert!((hit.toi - 0.2).abs() < 1e-5);
         assert!((hit.normal.x + 1.0).abs() < 1e-5);
         assert!((hit.contact.x - (-1.0)).abs() < 1e-5);
+    }
+
+    #[test]
+    fn test_circle_tile_pushout_signed_depth() {
+        let tile_min = Vec2::new(0.0, 0.0);
+        let cell = 1.0;
+
+        // separated
+        let (_n1, d1, _c1) = Narrowphase::circle_tile_pushout(Vec2::new(-2.0, 0.5), 0.25, tile_min, cell);
+        assert!(d1 < 0.0);
+
+        // tangent (touching)
+        let (_n2, d2, _c2) = Narrowphase::circle_tile_pushout(Vec2::new(-0.25, 0.5), 0.25, tile_min, cell);
+        assert!(d2.abs() < 1e-5);
+
+        // overlap
+        let (_n3, d3, _c3) = Narrowphase::circle_tile_pushout(Vec2::new(0.25, 0.5), 0.5, tile_min, cell);
+        assert!(d3 > 0.0);
+    }
+
+    #[test]
+    fn test_aabb_tile_pushout_signed_depth() {
+        let tile_min = Vec2::new(0.0, 0.0);
+        let cell = 1.0;
+
+        // separated
+        let (n1, d1, _c1) = Narrowphase::aabb_tile_pushout(Vec2::new(-2.0, 0.5), Vec2::splat(0.25), tile_min, cell);
+        assert!(d1 < 0.0);
+        assert!(n1.x.abs() > 0.5); // axis-aligned toward shape
+
+        // tangent
+        let (_n2, d2, _c2) = Narrowphase::aabb_tile_pushout(Vec2::new(-0.25, 0.5), Vec2::splat(0.25), tile_min, cell);
+        assert!(d2.abs() < 1e-5);
+
+        // overlap
+        let (n3, d3, _c3) = Narrowphase::aabb_tile_pushout(Vec2::new(0.25, 0.5), Vec2::splat(0.5), tile_min, cell);
+        assert!(d3 > 0.0);
+        assert!(n3.length() > 0.9);
     }
 }

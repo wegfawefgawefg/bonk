@@ -310,6 +310,10 @@ pub trait NarrowphaseApi {
                            c1: Vec2, r1: f32, v1: Vec2) -> Option<SweepHit>;
 
     // Tile helpers -----------------------------------------------------------
+    // Signed depth semantics:
+    //  - depth >= 0 when overlapping or tangent (0 = just touching)
+    //  - depth < 0 when separated; |depth| is the gap distance
+    //  - AABB separation normal is axis-aligned toward the shape; circle separation normal is Vec2::ZERO
     fn aabb_tile_pushout(c: Vec2, he: Vec2, tile_min: Vec2, cell: f32) -> (Vec2, f32, Vec2);
     fn circle_tile_pushout(c: Vec2, r: f32, tile_min: Vec2, cell: f32) -> (Vec2, f32, Vec2);
 }
