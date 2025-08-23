@@ -124,7 +124,39 @@ pub struct WorldConfig {
     pub enable_sweep_events: bool,
     /// Maximum number of events to emit per frame; extra are dropped.
     pub max_events: usize,
+    /// Enable internal timing instrumentation (adds small overhead when true).
+    pub enable_timing: bool,
 }
+
+/// Debug/performance statistics for a built frame.
+#[derive(Copy, Clone, Debug, Default)]
+pub struct WorldStats {
+    pub entries: usize,
+    pub cells: usize,
+    /// Sum of per-cell pair counts (n*(n-1)/2), counts duplicates across cells.
+    pub candidate_pairs: usize,
+    /// Unique pairs encountered when deduplicated across cells.
+    pub unique_pairs: usize,
+}
+
+/// Timing breakdown for the last completed frame operations.
+#[derive(Copy, Clone, Debug, Default)]
+pub struct WorldTiming {
+    pub end_frame_ms: f64,
+    pub end_frame_aabbs_ms: f64,
+    pub end_frame_grid_ms: f64,
+
+    pub generate_ms: f64,
+    pub generate_scan_ms: f64,
+    pub generate_narrowphase_ms: f64,
+
+    pub events_emitted: usize,
+}
+
+// Implementations may provide additional, non-trait debug helpers that return
+// these types. In this repository, the concrete `PhysicsWorld` exposes:
+//   - `fn debug_stats(&self) -> WorldStats`
+//   - `fn timing(&self) -> Option<WorldTiming>`
 
 /// Public API contract for the detection-only physics world.
 pub trait PhysicsWorldApi {
@@ -221,19 +253,15 @@ pub trait NarrowphaseApi {
 }
 
 /// Re-exports commonly used items for downstream crates/apps.
-pub mod prelude {
-    pub use super::{
-        ColKey, LayerMask, ColliderKind, ColliderDesc, Motion,
-        Overlap, SweepHit, EventKind, Event, FrameId,
-        WorldConfig, PhysicsWorldApi, NarrowphaseApi,
-    };
-}
+// Optional: downstream crates/apps can re-export a prelude if desired.
+// In this repository, the `nobonk` crate re-exports items at the crate root,
+// so consumers use `use nobonk::*;` instead.
 
 /* -------------------------------------------------------------------------
 Example usage (spec):
 
 use glam::Vec2;
-use crate::prelude::*;
+use nobonk::*; // In this repo, items are re-exported at crate root
 
 fn frame<W: PhysicsWorldApi>(world: &mut W) {
     world.begin_frame();
@@ -266,7 +294,7 @@ fn frame<W: PhysicsWorldApi>(world: &mut W) {
 // glam = "0.27"
 // physics_spec = { path = "." } // if this spec is your crate root
 //
-// File: examples/basic.rs
+// File: examples/basic.rs (consumer stub; this repo uses `nobonk` instead)
 // ------------------------------------------------------------
 // use glam::Vec2;
 // use physics_spec::prelude::*;
@@ -343,19 +371,25 @@ fn frame<W: PhysicsWorldApi>(world: &mut W) {
 //         enable_overlap_events: true,
 //         enable_sweep_events: true,
 //         max_events: 10_000,
+//         enable_timing: false,
 //     });
 //     drive_one_frame(&mut world);
 // }
 //
-// File: examples/queries.rs
+// File: examples/queries.rs (consumer stub; this repo uses `nobonk` instead)
 // ------------------------------------------------------------
 // use glam::Vec2;
 // use physics_spec::prelude::*;
 // struct DummyWorld; /* impl as in basic.rs */
 // fn main() {
 //     let mut world = DummyWorld::new(WorldConfig {
-//         cell_size: 64.0, dt: 1.0/60.0, tighten_swept_aabb: true,
-//         enable_overlap_events: true, enable_sweep_events: true, max_events: 1024,
+//         cell_size: 64.0,
+//         dt: 1.0/60.0,
+//         tighten_swept_aabb: true,
+//         enable_overlap_events: true,
+//         enable_sweep_events: true,
+//         max_events: 1024,
+//         enable_timing: false,
 //     });
 //     world.begin_frame();
 //     world.push_aabb(Vec2::ZERO, Vec2::splat(50.0), Vec2::ZERO, LayerMask::simple(1, !0), Some(1));
@@ -373,6 +407,26 @@ fn frame<W: PhysicsWorldApi>(world: &mut W) {
 
 
 /* -------------------------------------------------------------------------
+Repository layout (this repo)
+
+repo/
+├─ Cargo.toml                 # crate: nobonk
+├─ src/
+│  ├─ lib.rs
+│  ├─ api.rs
+│  ├─ types.rs
+│  ├─ narrowphase.rs
+│  └─ world.rs
+├─ examples/
+│  ├─ breakout_events.rs
+│  ├─ perf_world.rs
+│  ├─ perf_sweep.rs
+│  ├─ raycast_demo.rs
+│  └─ bench_narrowphase.rs
+└─ spec.txt                   # this spec file
+
+// The following scaffold is a suggested alternative workspace structure,
+// retained here for reference only. It does not reflect this repo exactly.
 Repository plan (scaffold)
 
 repo/
@@ -585,125 +639,7 @@ repo/
 */
 
 
-/* -------------------------------------------------------------------------
-FINAL CLEAN SPEC: NOBONK (GPL-3.0-only)
-
-Notes:
-- This spec is implementation-agnostic and matches the simple, single-ephemeral-grid design.
-- Use this section as the source of truth for agents.
-- License intent for this repository: GPL-3.0-only.
-*/
-
-// Crate: nobonk-spec (public API)
-// File: crates/nobonk-spec/src/lib.rs
-// -------------------------------------------------------------------------
-// (Identical API to the spec above; repeated here to be the canonical copy under NOBONK naming.)
-
-use glam::Vec2;
-
-pub type ColKey = u64;
-
-#[derive(Copy, Clone, Debug, Default)]
-pub struct LayerMask {
-    pub layer: u32,
-    pub collides_with: u32,
-    pub exclude: u32,
-}
-impl LayerMask {
-    pub fn simple(layer: u32, collides_with: u32) -> Self { Self { layer, collides_with, exclude: 0 } }
-    pub fn allows(self, other: LayerMask) -> bool {
-        (self.collides_with & other.layer) != 0 && (self.exclude & other.layer) == 0
-    }
-}
-
-#[derive(Copy, Clone, Debug)]
-pub enum ColliderKind { Aabb { half_extents: Vec2 }, Circle { radius: f32 }, Point }
-
-#[derive(Copy, Clone, Debug)]
-pub struct ColliderDesc {
-    pub kind: ColliderKind,
-    pub center: Vec2,
-    pub mask: LayerMask,
-    pub user_key: Option<ColKey>,
-}
-
-#[derive(Copy, Clone, Debug, Default)]
-pub struct Motion { pub vel: Vec2 }
-
-#[derive(Copy, Clone, Debug)]
-pub struct Overlap { pub normal: Vec2, pub depth: f32, pub contact: Vec2 }
-
-#[derive(Copy, Clone, Debug)]
-pub struct SweepHit { pub toi: f32, pub normal: Vec2, pub contact: Vec2 }
-
-#[derive(Copy, Clone, Debug)]
-pub enum EventKind { Overlap, Sweep }
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct FrameId(pub u32);
-
-#[derive(Copy, Clone, Debug)]
-pub struct Event {
-    pub kind: EventKind,
-    pub a: FrameId,
-    pub b: FrameId,
-    pub a_key: Option<ColKey>,
-    pub b_key: Option<ColKey>,
-    pub overlap: Option<Overlap>,
-    pub sweep: Option<SweepHit>,
-}
-
-#[derive(Clone, Debug)]
-pub struct WorldConfig {
-    pub cell_size: f32,
-    pub dt: f32,
-    pub tighten_swept_aabb: bool,
-    pub enable_overlap_events: bool,
-    pub enable_sweep_events: bool,
-    pub max_events: usize,
-}
-
-pub trait PhysicsWorldApi {
-    fn new(cfg: WorldConfig) -> Self where Self: Sized;
-    fn begin_frame(&mut self);
-    fn push(&mut self, desc: ColliderDesc, motion: Motion) -> FrameId;
-    fn push_circle(&mut self, center: Vec2, radius: f32, vel: Vec2, mask: LayerMask, user_key: Option<ColKey>) -> FrameId;
-    fn push_aabb(&mut self, center: Vec2, half_extents: Vec2, vel: Vec2, mask: LayerMask, user_key: Option<ColKey>) -> FrameId;
-    fn push_point(&mut self, p: Vec2, vel: Vec2, mask: LayerMask, user_key: Option<ColKey>) -> FrameId;
-    fn end_frame(&mut self);
-    fn generate_events(&mut self);
-    fn drain_events(&mut self) -> Vec<Event>;
-    fn raycast(&self, origin: Vec2, dir: Vec2, mask: LayerMask, max_t: f32) -> Option<(FrameId, SweepHit, Option<ColKey>)>;
-    fn query_point(&self, p: Vec2, mask: LayerMask) -> Vec<(FrameId, Option<ColKey>)>;
-    fn query_aabb(&self, center: Vec2, half_extents: Vec2, mask: LayerMask) -> Vec<(FrameId, Option<ColKey>)>;
-    fn query_circle(&self, center: Vec2, radius: f32, mask: LayerMask) -> Vec<(FrameId, Option<ColKey>)>;
-    fn overlap_pair(&self, a: FrameId, b: FrameId) -> Option<Overlap>;
-    fn sweep_pair(&self, a: FrameId, b: FrameId) -> Option<SweepHit>;
-    fn overlap_by_key(&self, a: ColKey, b: ColKey) -> Option<Overlap>;
-    fn sweep_by_key(&self, a: ColKey, b: ColKey) -> Option<SweepHit>;
-}
-
-pub trait NarrowphaseApi {
-    fn ray_aabb(origin: Vec2, dir: Vec2, aabb_min: Vec2, aabb_max: Vec2) -> Option<SweepHit>;
-    fn ray_circle(origin: Vec2, dir: Vec2, center: Vec2, r: f32) -> Option<SweepHit>;
-    fn line_segment_aabb(a: Vec2, b: Vec2, aabb_min: Vec2, aabb_max: Vec2) -> Option<SweepHit>;
-    fn line_segment_circle(a: Vec2, b: Vec2, center: Vec2, r: f32) -> Option<SweepHit>;
-    fn overlap_aabb_aabb(c0: Vec2, h0: Vec2, c1: Vec2, h1: Vec2) -> Option<Overlap>;
-    fn overlap_circle_circle(c0: Vec2, r0: f32, c1: Vec2, r1: f32) -> Option<Overlap>;
-    fn overlap_point_aabb(p: Vec2, c: Vec2, h: Vec2) -> bool;
-    fn overlap_point_circle(p: Vec2, c: Vec2, r: f32) -> bool;
-    fn sweep_aabb_aabb(c0: Vec2, h0: Vec2, v0: Vec2, c1: Vec2, h1: Vec2, v1: Vec2) -> Option<SweepHit>;
-    fn sweep_circle_aabb(c: Vec2, r: f32, v: Vec2, box_c: Vec2, box_h: Vec2, box_v: Vec2) -> Option<SweepHit>;
-    fn sweep_circle_circle(c0: Vec2, r0: f32, v0: Vec2, c1: Vec2, r1: f32, v1: Vec2) -> Option<SweepHit>;
-}
-
-pub mod prelude { pub use super::*; }
-
-/* -------------------------------------------------------------------------
-UPDATED REPO PLAN (NOBONK, GPL-3.0-only, no CI)
-
-repo/
-├─ Cargo.toml                 # workspace
+/* End of consolidated spec */
 ├─ .editorconfig
 ├─ .gitignore
 ├─ crates/
@@ -832,7 +768,7 @@ use criterion::{criterion_group, criterion_main, Criterion, BatchSize};
 use rand::{Rng, SeedableRng};
 use rand_pcg::Pcg64Mcg;
 use glam::Vec2;
-use nobonk::{prelude::*, World};
+use nobonk::*;
 
 fn gen_colliders(n: usize, seed: u64) -> Vec<(ColliderDesc, Motion)> {
     let mut rng = Pcg64Mcg::seed_from_u64(seed);
@@ -855,7 +791,7 @@ fn bench_grid_build(c: &mut Criterion) {
     for &n in &[1_000usize, 10_000, 100_000] {
         group.bench_function(format!("build_n={}", n), |b| {
             b.iter_batched(
-                || (World::new(WorldConfig{cell_size:64.0,dt:1.0/60.0,tighten_swept_aabb:true,enable_overlap_events:false,enable_sweep_events:false,max_events:0}), gen_colliders(n, 1337))),
+                || (PhysicsWorld::new(WorldConfig{cell_size:64.0,dt:1.0/60.0,tighten_swept_aabb:true,enable_overlap_events:false,enable_sweep_events:false,max_events:0,enable_timing:false}), gen_colliders(n, 1337))),
                 |(mut world, items)| {
                     world.begin_frame();
                     for (d, m) in items.iter() { let _ = world.push(*d, *m); }
@@ -876,7 +812,7 @@ Property tests (crates/nobonk/tests/*.rs)
 ---------------------------------------
 // proptest: sweep relative velocity equivalence
 // sweep(a,vA,b,vB) == sweep(a,vA-vB,b,0) for finite TOI cases
-use glam::Vec2; use nobonk::prelude::*; use proptest::prelude::*;
+use glam::Vec2; use nobonk::*; use proptest::prelude::*;
 
 proptest!{
   #[test]

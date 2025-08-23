@@ -163,3 +163,14 @@ loop {
 - Correctness tests: `cargo test`
 - Quick perf sample: `cargo run --example perf_world`
 - CSV sweep: `cargo run --example perf_sweep > sweep.csv`
+
+## WTF
+
+```bash
+# 1) Install nightly (minimal components are enough)
+rustup toolchain install nightly --profile minimal
+
+# 2) Run from your crate/workspace root
+cargo public-api --simplified > public-api.txt
+
+```

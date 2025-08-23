@@ -1,0 +1,626 @@
+pub mod nobonk
+pub mod nobonk::api
+pub trait nobonk::api::NarrowphaseApi
+pub fn nobonk::api::NarrowphaseApi::line_segment_aabb(a: glam::f32::vec2::Vec2, b: glam::f32::vec2::Vec2, aabb_min: glam::f32::vec2::Vec2, aabb_max: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::api::NarrowphaseApi::line_segment_circle(a: glam::f32::vec2::Vec2, b: glam::f32::vec2::Vec2, center: glam::f32::vec2::Vec2, r: f32) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::api::NarrowphaseApi::overlap_aabb_aabb(c0: glam::f32::vec2::Vec2, h0: glam::f32::vec2::Vec2, c1: glam::f32::vec2::Vec2, h1: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::Overlap>
+pub fn nobonk::api::NarrowphaseApi::overlap_circle_circle(c0: glam::f32::vec2::Vec2, r0: f32, c1: glam::f32::vec2::Vec2, r1: f32) -> core::option::Option<nobonk::Overlap>
+pub fn nobonk::api::NarrowphaseApi::overlap_point_aabb(p: glam::f32::vec2::Vec2, c: glam::f32::vec2::Vec2, h: glam::f32::vec2::Vec2) -> bool
+pub fn nobonk::api::NarrowphaseApi::overlap_point_circle(p: glam::f32::vec2::Vec2, c: glam::f32::vec2::Vec2, r: f32) -> bool
+pub fn nobonk::api::NarrowphaseApi::ray_aabb(origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, aabb_min: glam::f32::vec2::Vec2, aabb_max: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::api::NarrowphaseApi::ray_circle(origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, center: glam::f32::vec2::Vec2, r: f32) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::api::NarrowphaseApi::sweep_aabb_aabb(c0: glam::f32::vec2::Vec2, h0: glam::f32::vec2::Vec2, v0: glam::f32::vec2::Vec2, c1: glam::f32::vec2::Vec2, h1: glam::f32::vec2::Vec2, v1: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::api::NarrowphaseApi::sweep_circle_aabb(c: glam::f32::vec2::Vec2, r: f32, v: glam::f32::vec2::Vec2, box_c: glam::f32::vec2::Vec2, box_h: glam::f32::vec2::Vec2, box_v: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::api::NarrowphaseApi::sweep_circle_circle(c0: glam::f32::vec2::Vec2, r0: f32, v0: glam::f32::vec2::Vec2, c1: glam::f32::vec2::Vec2, r1: f32, v1: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
+impl nobonk::NarrowphaseApi for nobonk::narrowphase::Narrowphase
+pub fn nobonk::narrowphase::Narrowphase::line_segment_aabb(a: glam::f32::vec2::Vec2, b: glam::f32::vec2::Vec2, aabb_min: glam::f32::vec2::Vec2, aabb_max: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::narrowphase::Narrowphase::line_segment_circle(a: glam::f32::vec2::Vec2, b: glam::f32::vec2::Vec2, center: glam::f32::vec2::Vec2, r: f32) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::narrowphase::Narrowphase::overlap_aabb_aabb(c0: glam::f32::vec2::Vec2, h0: glam::f32::vec2::Vec2, c1: glam::f32::vec2::Vec2, h1: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::Overlap>
+pub fn nobonk::narrowphase::Narrowphase::overlap_circle_circle(c0: glam::f32::vec2::Vec2, r0: f32, c1: glam::f32::vec2::Vec2, r1: f32) -> core::option::Option<nobonk::Overlap>
+pub fn nobonk::narrowphase::Narrowphase::overlap_point_aabb(p: glam::f32::vec2::Vec2, c: glam::f32::vec2::Vec2, h: glam::f32::vec2::Vec2) -> bool
+pub fn nobonk::narrowphase::Narrowphase::overlap_point_circle(p: glam::f32::vec2::Vec2, c: glam::f32::vec2::Vec2, r: f32) -> bool
+pub fn nobonk::narrowphase::Narrowphase::ray_aabb(origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, aabb_min: glam::f32::vec2::Vec2, aabb_max: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::narrowphase::Narrowphase::ray_circle(origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, center: glam::f32::vec2::Vec2, r: f32) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::narrowphase::Narrowphase::sweep_aabb_aabb(c0: glam::f32::vec2::Vec2, h0: glam::f32::vec2::Vec2, v0: glam::f32::vec2::Vec2, c1: glam::f32::vec2::Vec2, h1: glam::f32::vec2::Vec2, v1: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::narrowphase::Narrowphase::sweep_circle_aabb(c: glam::f32::vec2::Vec2, r: f32, v: glam::f32::vec2::Vec2, box_c: glam::f32::vec2::Vec2, box_h: glam::f32::vec2::Vec2, box_v: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::narrowphase::Narrowphase::sweep_circle_circle(c0: glam::f32::vec2::Vec2, r0: f32, v0: glam::f32::vec2::Vec2, c1: glam::f32::vec2::Vec2, r1: f32, v1: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
+pub trait nobonk::api::PhysicsWorldApi
+pub fn nobonk::api::PhysicsWorldApi::begin_frame(&mut self)
+pub fn nobonk::api::PhysicsWorldApi::drain_events(&mut self) -> alloc::vec::Vec<nobonk::Event>
+pub fn nobonk::api::PhysicsWorldApi::end_frame(&mut self)
+pub fn nobonk::api::PhysicsWorldApi::generate_events(&mut self)
+pub fn nobonk::api::PhysicsWorldApi::new(cfg: nobonk::WorldConfig) -> Self where Self: core::marker::Sized
+pub fn nobonk::api::PhysicsWorldApi::overlap_by_key(&self, a: nobonk::ColKey, b: nobonk::ColKey) -> core::option::Option<nobonk::Overlap>
+pub fn nobonk::api::PhysicsWorldApi::overlap_pair(&self, a: nobonk::FrameId, b: nobonk::FrameId) -> core::option::Option<nobonk::Overlap>
+pub fn nobonk::api::PhysicsWorldApi::push(&mut self, desc: nobonk::ColliderDesc, motion: nobonk::Motion) -> nobonk::FrameId
+pub fn nobonk::api::PhysicsWorldApi::push_aabb(&mut self, center: glam::f32::vec2::Vec2, half_extents: glam::f32::vec2::Vec2, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, user_key: core::option::Option<nobonk::ColKey>) -> nobonk::FrameId
+pub fn nobonk::api::PhysicsWorldApi::push_circle(&mut self, center: glam::f32::vec2::Vec2, radius: f32, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, user_key: core::option::Option<nobonk::ColKey>) -> nobonk::FrameId
+pub fn nobonk::api::PhysicsWorldApi::push_point(&mut self, p: glam::f32::vec2::Vec2, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, user_key: core::option::Option<nobonk::ColKey>) -> nobonk::FrameId
+pub fn nobonk::api::PhysicsWorldApi::query_aabb(&self, center: glam::f32::vec2::Vec2, half_extents: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::api::PhysicsWorldApi::query_circle(&self, center: glam::f32::vec2::Vec2, radius: f32, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::api::PhysicsWorldApi::query_point(&self, p: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::api::PhysicsWorldApi::raycast(&self, origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, max_t: f32) -> core::option::Option<(nobonk::FrameId, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::api::PhysicsWorldApi::sweep_by_key(&self, a: nobonk::ColKey, b: nobonk::ColKey) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::api::PhysicsWorldApi::sweep_pair(&self, a: nobonk::FrameId, b: nobonk::FrameId) -> core::option::Option<nobonk::SweepHit>
+impl nobonk::PhysicsWorldApi for nobonk::world::PhysicsWorld
+pub fn nobonk::world::PhysicsWorld::begin_frame(&mut self)
+pub fn nobonk::world::PhysicsWorld::drain_events(&mut self) -> alloc::vec::Vec<nobonk::Event>
+pub fn nobonk::world::PhysicsWorld::end_frame(&mut self)
+pub fn nobonk::world::PhysicsWorld::generate_events(&mut self)
+pub fn nobonk::world::PhysicsWorld::new(cfg: nobonk::WorldConfig) -> Self
+pub fn nobonk::world::PhysicsWorld::overlap_by_key(&self, a: nobonk::ColKey, b: nobonk::ColKey) -> core::option::Option<nobonk::Overlap>
+pub fn nobonk::world::PhysicsWorld::overlap_pair(&self, a: nobonk::FrameId, b: nobonk::FrameId) -> core::option::Option<nobonk::Overlap>
+pub fn nobonk::world::PhysicsWorld::push(&mut self, desc: nobonk::ColliderDesc, motion: nobonk::Motion) -> nobonk::FrameId
+pub fn nobonk::world::PhysicsWorld::push_aabb(&mut self, center: glam::f32::vec2::Vec2, half_extents: glam::f32::vec2::Vec2, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, user_key: core::option::Option<nobonk::ColKey>) -> nobonk::FrameId
+pub fn nobonk::world::PhysicsWorld::push_circle(&mut self, center: glam::f32::vec2::Vec2, radius: f32, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, user_key: core::option::Option<nobonk::ColKey>) -> nobonk::FrameId
+pub fn nobonk::world::PhysicsWorld::push_point(&mut self, p: glam::f32::vec2::Vec2, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, user_key: core::option::Option<nobonk::ColKey>) -> nobonk::FrameId
+pub fn nobonk::world::PhysicsWorld::query_aabb(&self, center: glam::f32::vec2::Vec2, half_extents: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::query_circle(&self, center: glam::f32::vec2::Vec2, radius: f32, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::query_point(&self, p: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::raycast(&self, origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, max_t: f32) -> core::option::Option<(nobonk::FrameId, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::sweep_by_key(&self, a: nobonk::ColKey, b: nobonk::ColKey) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::world::PhysicsWorld::sweep_pair(&self, a: nobonk::FrameId, b: nobonk::FrameId) -> core::option::Option<nobonk::SweepHit>
+pub mod nobonk::narrowphase
+pub struct nobonk::narrowphase::Narrowphase
+impl nobonk::NarrowphaseApi for nobonk::narrowphase::Narrowphase
+pub fn nobonk::narrowphase::Narrowphase::line_segment_aabb(a: glam::f32::vec2::Vec2, b: glam::f32::vec2::Vec2, aabb_min: glam::f32::vec2::Vec2, aabb_max: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::narrowphase::Narrowphase::line_segment_circle(a: glam::f32::vec2::Vec2, b: glam::f32::vec2::Vec2, center: glam::f32::vec2::Vec2, r: f32) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::narrowphase::Narrowphase::overlap_aabb_aabb(c0: glam::f32::vec2::Vec2, h0: glam::f32::vec2::Vec2, c1: glam::f32::vec2::Vec2, h1: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::Overlap>
+pub fn nobonk::narrowphase::Narrowphase::overlap_circle_circle(c0: glam::f32::vec2::Vec2, r0: f32, c1: glam::f32::vec2::Vec2, r1: f32) -> core::option::Option<nobonk::Overlap>
+pub fn nobonk::narrowphase::Narrowphase::overlap_point_aabb(p: glam::f32::vec2::Vec2, c: glam::f32::vec2::Vec2, h: glam::f32::vec2::Vec2) -> bool
+pub fn nobonk::narrowphase::Narrowphase::overlap_point_circle(p: glam::f32::vec2::Vec2, c: glam::f32::vec2::Vec2, r: f32) -> bool
+pub fn nobonk::narrowphase::Narrowphase::ray_aabb(origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, aabb_min: glam::f32::vec2::Vec2, aabb_max: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::narrowphase::Narrowphase::ray_circle(origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, center: glam::f32::vec2::Vec2, r: f32) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::narrowphase::Narrowphase::sweep_aabb_aabb(c0: glam::f32::vec2::Vec2, h0: glam::f32::vec2::Vec2, v0: glam::f32::vec2::Vec2, c1: glam::f32::vec2::Vec2, h1: glam::f32::vec2::Vec2, v1: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::narrowphase::Narrowphase::sweep_circle_aabb(c: glam::f32::vec2::Vec2, r: f32, v: glam::f32::vec2::Vec2, box_c: glam::f32::vec2::Vec2, box_h: glam::f32::vec2::Vec2, box_v: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::narrowphase::Narrowphase::sweep_circle_circle(c0: glam::f32::vec2::Vec2, r0: f32, v0: glam::f32::vec2::Vec2, c1: glam::f32::vec2::Vec2, r1: f32, v1: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
+impl core::marker::Freeze for nobonk::narrowphase::Narrowphase
+impl core::marker::Send for nobonk::narrowphase::Narrowphase
+impl core::marker::Sync for nobonk::narrowphase::Narrowphase
+impl core::marker::Unpin for nobonk::narrowphase::Narrowphase
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::narrowphase::Narrowphase
+impl core::panic::unwind_safe::UnwindSafe for nobonk::narrowphase::Narrowphase
+pub mod nobonk::types
+pub enum nobonk::types::ColliderKind
+pub nobonk::types::ColliderKind::Aabb
+pub nobonk::types::ColliderKind::Aabb::half_extents: glam::f32::vec2::Vec2
+pub nobonk::types::ColliderKind::Circle
+pub nobonk::types::ColliderKind::Circle::radius: f32
+pub nobonk::types::ColliderKind::Point
+impl core::clone::Clone for nobonk::ColliderKind
+pub fn nobonk::ColliderKind::clone(&self) -> nobonk::ColliderKind
+impl core::fmt::Debug for nobonk::ColliderKind
+pub fn nobonk::ColliderKind::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for nobonk::ColliderKind
+impl core::marker::Freeze for nobonk::ColliderKind
+impl core::marker::Send for nobonk::ColliderKind
+impl core::marker::Sync for nobonk::ColliderKind
+impl core::marker::Unpin for nobonk::ColliderKind
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::ColliderKind
+impl core::panic::unwind_safe::UnwindSafe for nobonk::ColliderKind
+pub enum nobonk::types::EventKind
+pub nobonk::types::EventKind::Overlap
+pub nobonk::types::EventKind::Sweep
+impl core::clone::Clone for nobonk::EventKind
+pub fn nobonk::EventKind::clone(&self) -> nobonk::EventKind
+impl core::fmt::Debug for nobonk::EventKind
+pub fn nobonk::EventKind::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for nobonk::EventKind
+impl core::marker::Freeze for nobonk::EventKind
+impl core::marker::Send for nobonk::EventKind
+impl core::marker::Sync for nobonk::EventKind
+impl core::marker::Unpin for nobonk::EventKind
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::EventKind
+impl core::panic::unwind_safe::UnwindSafe for nobonk::EventKind
+pub struct nobonk::types::ColliderDesc
+pub nobonk::types::ColliderDesc::center: glam::f32::vec2::Vec2
+pub nobonk::types::ColliderDesc::kind: nobonk::ColliderKind
+pub nobonk::types::ColliderDesc::mask: nobonk::LayerMask
+pub nobonk::types::ColliderDesc::user_key: core::option::Option<nobonk::ColKey>
+impl core::clone::Clone for nobonk::ColliderDesc
+pub fn nobonk::ColliderDesc::clone(&self) -> nobonk::ColliderDesc
+impl core::fmt::Debug for nobonk::ColliderDesc
+pub fn nobonk::ColliderDesc::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for nobonk::ColliderDesc
+impl core::marker::Freeze for nobonk::ColliderDesc
+impl core::marker::Send for nobonk::ColliderDesc
+impl core::marker::Sync for nobonk::ColliderDesc
+impl core::marker::Unpin for nobonk::ColliderDesc
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::ColliderDesc
+impl core::panic::unwind_safe::UnwindSafe for nobonk::ColliderDesc
+pub struct nobonk::types::Event
+pub nobonk::types::Event::a: nobonk::FrameId
+pub nobonk::types::Event::a_key: core::option::Option<nobonk::ColKey>
+pub nobonk::types::Event::b: nobonk::FrameId
+pub nobonk::types::Event::b_key: core::option::Option<nobonk::ColKey>
+pub nobonk::types::Event::kind: nobonk::EventKind
+pub nobonk::types::Event::overlap: core::option::Option<nobonk::Overlap>
+pub nobonk::types::Event::sweep: core::option::Option<nobonk::SweepHit>
+impl core::clone::Clone for nobonk::Event
+pub fn nobonk::Event::clone(&self) -> nobonk::Event
+impl core::fmt::Debug for nobonk::Event
+pub fn nobonk::Event::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for nobonk::Event
+impl core::marker::Freeze for nobonk::Event
+impl core::marker::Send for nobonk::Event
+impl core::marker::Sync for nobonk::Event
+impl core::marker::Unpin for nobonk::Event
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::Event
+impl core::panic::unwind_safe::UnwindSafe for nobonk::Event
+pub struct nobonk::types::FrameId(pub u32)
+impl core::clone::Clone for nobonk::FrameId
+pub fn nobonk::FrameId::clone(&self) -> nobonk::FrameId
+impl core::cmp::Eq for nobonk::FrameId
+impl core::cmp::Ord for nobonk::FrameId
+pub fn nobonk::FrameId::cmp(&self, other: &nobonk::FrameId) -> core::cmp::Ordering
+impl core::cmp::PartialEq for nobonk::FrameId
+pub fn nobonk::FrameId::eq(&self, other: &nobonk::FrameId) -> bool
+impl core::cmp::PartialOrd for nobonk::FrameId
+pub fn nobonk::FrameId::partial_cmp(&self, other: &nobonk::FrameId) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for nobonk::FrameId
+pub fn nobonk::FrameId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for nobonk::FrameId
+pub fn nobonk::FrameId::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for nobonk::FrameId
+impl core::marker::StructuralPartialEq for nobonk::FrameId
+impl core::marker::Freeze for nobonk::FrameId
+impl core::marker::Send for nobonk::FrameId
+impl core::marker::Sync for nobonk::FrameId
+impl core::marker::Unpin for nobonk::FrameId
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::FrameId
+impl core::panic::unwind_safe::UnwindSafe for nobonk::FrameId
+pub struct nobonk::types::LayerMask
+pub nobonk::types::LayerMask::collides_with: u32
+pub nobonk::types::LayerMask::exclude: u32
+pub nobonk::types::LayerMask::layer: u32
+impl nobonk::LayerMask
+pub fn nobonk::LayerMask::allows(self, other: nobonk::LayerMask) -> bool
+pub fn nobonk::LayerMask::simple(layer: u32, collides_with: u32) -> Self
+impl core::clone::Clone for nobonk::LayerMask
+pub fn nobonk::LayerMask::clone(&self) -> nobonk::LayerMask
+impl core::default::Default for nobonk::LayerMask
+pub fn nobonk::LayerMask::default() -> nobonk::LayerMask
+impl core::fmt::Debug for nobonk::LayerMask
+pub fn nobonk::LayerMask::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for nobonk::LayerMask
+impl core::marker::Freeze for nobonk::LayerMask
+impl core::marker::Send for nobonk::LayerMask
+impl core::marker::Sync for nobonk::LayerMask
+impl core::marker::Unpin for nobonk::LayerMask
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::LayerMask
+impl core::panic::unwind_safe::UnwindSafe for nobonk::LayerMask
+pub struct nobonk::types::Motion
+pub nobonk::types::Motion::vel: glam::f32::vec2::Vec2
+impl core::clone::Clone for nobonk::Motion
+pub fn nobonk::Motion::clone(&self) -> nobonk::Motion
+impl core::default::Default for nobonk::Motion
+pub fn nobonk::Motion::default() -> nobonk::Motion
+impl core::fmt::Debug for nobonk::Motion
+pub fn nobonk::Motion::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for nobonk::Motion
+impl core::marker::Freeze for nobonk::Motion
+impl core::marker::Send for nobonk::Motion
+impl core::marker::Sync for nobonk::Motion
+impl core::marker::Unpin for nobonk::Motion
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::Motion
+impl core::panic::unwind_safe::UnwindSafe for nobonk::Motion
+pub struct nobonk::types::Overlap
+pub nobonk::types::Overlap::contact: glam::f32::vec2::Vec2
+pub nobonk::types::Overlap::depth: f32
+pub nobonk::types::Overlap::normal: glam::f32::vec2::Vec2
+impl core::clone::Clone for nobonk::Overlap
+pub fn nobonk::Overlap::clone(&self) -> nobonk::Overlap
+impl core::fmt::Debug for nobonk::Overlap
+pub fn nobonk::Overlap::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for nobonk::Overlap
+impl core::marker::Freeze for nobonk::Overlap
+impl core::marker::Send for nobonk::Overlap
+impl core::marker::Sync for nobonk::Overlap
+impl core::marker::Unpin for nobonk::Overlap
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::Overlap
+impl core::panic::unwind_safe::UnwindSafe for nobonk::Overlap
+pub struct nobonk::types::SweepHit
+pub nobonk::types::SweepHit::contact: glam::f32::vec2::Vec2
+pub nobonk::types::SweepHit::normal: glam::f32::vec2::Vec2
+pub nobonk::types::SweepHit::toi: f32
+impl core::clone::Clone for nobonk::SweepHit
+pub fn nobonk::SweepHit::clone(&self) -> nobonk::SweepHit
+impl core::fmt::Debug for nobonk::SweepHit
+pub fn nobonk::SweepHit::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for nobonk::SweepHit
+impl core::marker::Freeze for nobonk::SweepHit
+impl core::marker::Send for nobonk::SweepHit
+impl core::marker::Sync for nobonk::SweepHit
+impl core::marker::Unpin for nobonk::SweepHit
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::SweepHit
+impl core::panic::unwind_safe::UnwindSafe for nobonk::SweepHit
+pub struct nobonk::types::WorldConfig
+pub nobonk::types::WorldConfig::cell_size: f32
+pub nobonk::types::WorldConfig::dt: f32
+pub nobonk::types::WorldConfig::enable_overlap_events: bool
+pub nobonk::types::WorldConfig::enable_sweep_events: bool
+pub nobonk::types::WorldConfig::enable_timing: bool
+pub nobonk::types::WorldConfig::max_events: usize
+pub nobonk::types::WorldConfig::tighten_swept_aabb: bool
+impl core::clone::Clone for nobonk::WorldConfig
+pub fn nobonk::WorldConfig::clone(&self) -> nobonk::WorldConfig
+impl core::fmt::Debug for nobonk::WorldConfig
+pub fn nobonk::WorldConfig::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for nobonk::WorldConfig
+impl core::marker::Send for nobonk::WorldConfig
+impl core::marker::Sync for nobonk::WorldConfig
+impl core::marker::Unpin for nobonk::WorldConfig
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::WorldConfig
+impl core::panic::unwind_safe::UnwindSafe for nobonk::WorldConfig
+pub struct nobonk::types::WorldStats
+pub nobonk::types::WorldStats::candidate_pairs: usize
+pub nobonk::types::WorldStats::cells: usize
+pub nobonk::types::WorldStats::entries: usize
+pub nobonk::types::WorldStats::unique_pairs: usize
+impl core::clone::Clone for nobonk::WorldStats
+pub fn nobonk::WorldStats::clone(&self) -> nobonk::WorldStats
+impl core::default::Default for nobonk::WorldStats
+pub fn nobonk::WorldStats::default() -> nobonk::WorldStats
+impl core::fmt::Debug for nobonk::WorldStats
+pub fn nobonk::WorldStats::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for nobonk::WorldStats
+impl core::marker::Freeze for nobonk::WorldStats
+impl core::marker::Send for nobonk::WorldStats
+impl core::marker::Sync for nobonk::WorldStats
+impl core::marker::Unpin for nobonk::WorldStats
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::WorldStats
+impl core::panic::unwind_safe::UnwindSafe for nobonk::WorldStats
+pub struct nobonk::types::WorldTiming
+pub nobonk::types::WorldTiming::end_frame_aabbs_ms: f64
+pub nobonk::types::WorldTiming::end_frame_grid_ms: f64
+pub nobonk::types::WorldTiming::end_frame_ms: f64
+pub nobonk::types::WorldTiming::events_emitted: usize
+pub nobonk::types::WorldTiming::generate_ms: f64
+pub nobonk::types::WorldTiming::generate_narrowphase_ms: f64
+pub nobonk::types::WorldTiming::generate_scan_ms: f64
+impl core::clone::Clone for nobonk::WorldTiming
+pub fn nobonk::WorldTiming::clone(&self) -> nobonk::WorldTiming
+impl core::default::Default for nobonk::WorldTiming
+pub fn nobonk::WorldTiming::default() -> nobonk::WorldTiming
+impl core::fmt::Debug for nobonk::WorldTiming
+pub fn nobonk::WorldTiming::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for nobonk::WorldTiming
+impl core::marker::Freeze for nobonk::WorldTiming
+impl core::marker::Send for nobonk::WorldTiming
+impl core::marker::Sync for nobonk::WorldTiming
+impl core::marker::Unpin for nobonk::WorldTiming
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::WorldTiming
+impl core::panic::unwind_safe::UnwindSafe for nobonk::WorldTiming
+pub type nobonk::types::ColKey = u64
+pub mod nobonk::world
+pub struct nobonk::world::PhysicsWorld
+pub nobonk::world::PhysicsWorld::cfg: nobonk::WorldConfig
+pub nobonk::world::PhysicsWorld::frame_counter: u32
+impl nobonk::world::PhysicsWorld
+pub fn nobonk::world::PhysicsWorld::debug_stats(&self) -> nobonk::WorldStats
+pub fn nobonk::world::PhysicsWorld::timing(&self) -> core::option::Option<nobonk::WorldTiming>
+impl nobonk::PhysicsWorldApi for nobonk::world::PhysicsWorld
+pub fn nobonk::world::PhysicsWorld::begin_frame(&mut self)
+pub fn nobonk::world::PhysicsWorld::drain_events(&mut self) -> alloc::vec::Vec<nobonk::Event>
+pub fn nobonk::world::PhysicsWorld::end_frame(&mut self)
+pub fn nobonk::world::PhysicsWorld::generate_events(&mut self)
+pub fn nobonk::world::PhysicsWorld::new(cfg: nobonk::WorldConfig) -> Self
+pub fn nobonk::world::PhysicsWorld::overlap_by_key(&self, a: nobonk::ColKey, b: nobonk::ColKey) -> core::option::Option<nobonk::Overlap>
+pub fn nobonk::world::PhysicsWorld::overlap_pair(&self, a: nobonk::FrameId, b: nobonk::FrameId) -> core::option::Option<nobonk::Overlap>
+pub fn nobonk::world::PhysicsWorld::push(&mut self, desc: nobonk::ColliderDesc, motion: nobonk::Motion) -> nobonk::FrameId
+pub fn nobonk::world::PhysicsWorld::push_aabb(&mut self, center: glam::f32::vec2::Vec2, half_extents: glam::f32::vec2::Vec2, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, user_key: core::option::Option<nobonk::ColKey>) -> nobonk::FrameId
+pub fn nobonk::world::PhysicsWorld::push_circle(&mut self, center: glam::f32::vec2::Vec2, radius: f32, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, user_key: core::option::Option<nobonk::ColKey>) -> nobonk::FrameId
+pub fn nobonk::world::PhysicsWorld::push_point(&mut self, p: glam::f32::vec2::Vec2, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, user_key: core::option::Option<nobonk::ColKey>) -> nobonk::FrameId
+pub fn nobonk::world::PhysicsWorld::query_aabb(&self, center: glam::f32::vec2::Vec2, half_extents: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::query_circle(&self, center: glam::f32::vec2::Vec2, radius: f32, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::query_point(&self, p: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::raycast(&self, origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, max_t: f32) -> core::option::Option<(nobonk::FrameId, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::sweep_by_key(&self, a: nobonk::ColKey, b: nobonk::ColKey) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::world::PhysicsWorld::sweep_pair(&self, a: nobonk::FrameId, b: nobonk::FrameId) -> core::option::Option<nobonk::SweepHit>
+impl core::marker::Freeze for nobonk::world::PhysicsWorld
+impl core::marker::Send for nobonk::world::PhysicsWorld
+impl core::marker::Sync for nobonk::world::PhysicsWorld
+impl core::marker::Unpin for nobonk::world::PhysicsWorld
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::world::PhysicsWorld
+impl core::panic::unwind_safe::UnwindSafe for nobonk::world::PhysicsWorld
+pub enum nobonk::ColliderKind
+pub nobonk::ColliderKind::Aabb
+pub nobonk::ColliderKind::Aabb::half_extents: glam::f32::vec2::Vec2
+pub nobonk::ColliderKind::Circle
+pub nobonk::ColliderKind::Circle::radius: f32
+pub nobonk::ColliderKind::Point
+impl core::clone::Clone for nobonk::ColliderKind
+pub fn nobonk::ColliderKind::clone(&self) -> nobonk::ColliderKind
+impl core::fmt::Debug for nobonk::ColliderKind
+pub fn nobonk::ColliderKind::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for nobonk::ColliderKind
+impl core::marker::Freeze for nobonk::ColliderKind
+impl core::marker::Send for nobonk::ColliderKind
+impl core::marker::Sync for nobonk::ColliderKind
+impl core::marker::Unpin for nobonk::ColliderKind
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::ColliderKind
+impl core::panic::unwind_safe::UnwindSafe for nobonk::ColliderKind
+pub enum nobonk::EventKind
+pub nobonk::EventKind::Overlap
+pub nobonk::EventKind::Sweep
+impl core::clone::Clone for nobonk::EventKind
+pub fn nobonk::EventKind::clone(&self) -> nobonk::EventKind
+impl core::fmt::Debug for nobonk::EventKind
+pub fn nobonk::EventKind::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for nobonk::EventKind
+impl core::marker::Freeze for nobonk::EventKind
+impl core::marker::Send for nobonk::EventKind
+impl core::marker::Sync for nobonk::EventKind
+impl core::marker::Unpin for nobonk::EventKind
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::EventKind
+impl core::panic::unwind_safe::UnwindSafe for nobonk::EventKind
+pub struct nobonk::ColliderDesc
+pub nobonk::ColliderDesc::center: glam::f32::vec2::Vec2
+pub nobonk::ColliderDesc::kind: nobonk::ColliderKind
+pub nobonk::ColliderDesc::mask: nobonk::LayerMask
+pub nobonk::ColliderDesc::user_key: core::option::Option<nobonk::ColKey>
+impl core::clone::Clone for nobonk::ColliderDesc
+pub fn nobonk::ColliderDesc::clone(&self) -> nobonk::ColliderDesc
+impl core::fmt::Debug for nobonk::ColliderDesc
+pub fn nobonk::ColliderDesc::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for nobonk::ColliderDesc
+impl core::marker::Freeze for nobonk::ColliderDesc
+impl core::marker::Send for nobonk::ColliderDesc
+impl core::marker::Sync for nobonk::ColliderDesc
+impl core::marker::Unpin for nobonk::ColliderDesc
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::ColliderDesc
+impl core::panic::unwind_safe::UnwindSafe for nobonk::ColliderDesc
+pub struct nobonk::Event
+pub nobonk::Event::a: nobonk::FrameId
+pub nobonk::Event::a_key: core::option::Option<nobonk::ColKey>
+pub nobonk::Event::b: nobonk::FrameId
+pub nobonk::Event::b_key: core::option::Option<nobonk::ColKey>
+pub nobonk::Event::kind: nobonk::EventKind
+pub nobonk::Event::overlap: core::option::Option<nobonk::Overlap>
+pub nobonk::Event::sweep: core::option::Option<nobonk::SweepHit>
+impl core::clone::Clone for nobonk::Event
+pub fn nobonk::Event::clone(&self) -> nobonk::Event
+impl core::fmt::Debug for nobonk::Event
+pub fn nobonk::Event::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for nobonk::Event
+impl core::marker::Freeze for nobonk::Event
+impl core::marker::Send for nobonk::Event
+impl core::marker::Sync for nobonk::Event
+impl core::marker::Unpin for nobonk::Event
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::Event
+impl core::panic::unwind_safe::UnwindSafe for nobonk::Event
+pub struct nobonk::FrameId(pub u32)
+impl core::clone::Clone for nobonk::FrameId
+pub fn nobonk::FrameId::clone(&self) -> nobonk::FrameId
+impl core::cmp::Eq for nobonk::FrameId
+impl core::cmp::Ord for nobonk::FrameId
+pub fn nobonk::FrameId::cmp(&self, other: &nobonk::FrameId) -> core::cmp::Ordering
+impl core::cmp::PartialEq for nobonk::FrameId
+pub fn nobonk::FrameId::eq(&self, other: &nobonk::FrameId) -> bool
+impl core::cmp::PartialOrd for nobonk::FrameId
+pub fn nobonk::FrameId::partial_cmp(&self, other: &nobonk::FrameId) -> core::option::Option<core::cmp::Ordering>
+impl core::fmt::Debug for nobonk::FrameId
+pub fn nobonk::FrameId::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::hash::Hash for nobonk::FrameId
+pub fn nobonk::FrameId::hash<__H: core::hash::Hasher>(&self, state: &mut __H)
+impl core::marker::Copy for nobonk::FrameId
+impl core::marker::StructuralPartialEq for nobonk::FrameId
+impl core::marker::Freeze for nobonk::FrameId
+impl core::marker::Send for nobonk::FrameId
+impl core::marker::Sync for nobonk::FrameId
+impl core::marker::Unpin for nobonk::FrameId
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::FrameId
+impl core::panic::unwind_safe::UnwindSafe for nobonk::FrameId
+pub struct nobonk::LayerMask
+pub nobonk::LayerMask::collides_with: u32
+pub nobonk::LayerMask::exclude: u32
+pub nobonk::LayerMask::layer: u32
+impl nobonk::LayerMask
+pub fn nobonk::LayerMask::allows(self, other: nobonk::LayerMask) -> bool
+pub fn nobonk::LayerMask::simple(layer: u32, collides_with: u32) -> Self
+impl core::clone::Clone for nobonk::LayerMask
+pub fn nobonk::LayerMask::clone(&self) -> nobonk::LayerMask
+impl core::default::Default for nobonk::LayerMask
+pub fn nobonk::LayerMask::default() -> nobonk::LayerMask
+impl core::fmt::Debug for nobonk::LayerMask
+pub fn nobonk::LayerMask::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for nobonk::LayerMask
+impl core::marker::Freeze for nobonk::LayerMask
+impl core::marker::Send for nobonk::LayerMask
+impl core::marker::Sync for nobonk::LayerMask
+impl core::marker::Unpin for nobonk::LayerMask
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::LayerMask
+impl core::panic::unwind_safe::UnwindSafe for nobonk::LayerMask
+pub struct nobonk::Motion
+pub nobonk::Motion::vel: glam::f32::vec2::Vec2
+impl core::clone::Clone for nobonk::Motion
+pub fn nobonk::Motion::clone(&self) -> nobonk::Motion
+impl core::default::Default for nobonk::Motion
+pub fn nobonk::Motion::default() -> nobonk::Motion
+impl core::fmt::Debug for nobonk::Motion
+pub fn nobonk::Motion::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for nobonk::Motion
+impl core::marker::Freeze for nobonk::Motion
+impl core::marker::Send for nobonk::Motion
+impl core::marker::Sync for nobonk::Motion
+impl core::marker::Unpin for nobonk::Motion
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::Motion
+impl core::panic::unwind_safe::UnwindSafe for nobonk::Motion
+pub struct nobonk::Overlap
+pub nobonk::Overlap::contact: glam::f32::vec2::Vec2
+pub nobonk::Overlap::depth: f32
+pub nobonk::Overlap::normal: glam::f32::vec2::Vec2
+impl core::clone::Clone for nobonk::Overlap
+pub fn nobonk::Overlap::clone(&self) -> nobonk::Overlap
+impl core::fmt::Debug for nobonk::Overlap
+pub fn nobonk::Overlap::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for nobonk::Overlap
+impl core::marker::Freeze for nobonk::Overlap
+impl core::marker::Send for nobonk::Overlap
+impl core::marker::Sync for nobonk::Overlap
+impl core::marker::Unpin for nobonk::Overlap
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::Overlap
+impl core::panic::unwind_safe::UnwindSafe for nobonk::Overlap
+pub struct nobonk::PhysicsWorld
+pub nobonk::PhysicsWorld::cfg: nobonk::WorldConfig
+pub nobonk::PhysicsWorld::frame_counter: u32
+impl nobonk::world::PhysicsWorld
+pub fn nobonk::world::PhysicsWorld::debug_stats(&self) -> nobonk::WorldStats
+pub fn nobonk::world::PhysicsWorld::timing(&self) -> core::option::Option<nobonk::WorldTiming>
+impl nobonk::PhysicsWorldApi for nobonk::world::PhysicsWorld
+pub fn nobonk::world::PhysicsWorld::begin_frame(&mut self)
+pub fn nobonk::world::PhysicsWorld::drain_events(&mut self) -> alloc::vec::Vec<nobonk::Event>
+pub fn nobonk::world::PhysicsWorld::end_frame(&mut self)
+pub fn nobonk::world::PhysicsWorld::generate_events(&mut self)
+pub fn nobonk::world::PhysicsWorld::new(cfg: nobonk::WorldConfig) -> Self
+pub fn nobonk::world::PhysicsWorld::overlap_by_key(&self, a: nobonk::ColKey, b: nobonk::ColKey) -> core::option::Option<nobonk::Overlap>
+pub fn nobonk::world::PhysicsWorld::overlap_pair(&self, a: nobonk::FrameId, b: nobonk::FrameId) -> core::option::Option<nobonk::Overlap>
+pub fn nobonk::world::PhysicsWorld::push(&mut self, desc: nobonk::ColliderDesc, motion: nobonk::Motion) -> nobonk::FrameId
+pub fn nobonk::world::PhysicsWorld::push_aabb(&mut self, center: glam::f32::vec2::Vec2, half_extents: glam::f32::vec2::Vec2, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, user_key: core::option::Option<nobonk::ColKey>) -> nobonk::FrameId
+pub fn nobonk::world::PhysicsWorld::push_circle(&mut self, center: glam::f32::vec2::Vec2, radius: f32, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, user_key: core::option::Option<nobonk::ColKey>) -> nobonk::FrameId
+pub fn nobonk::world::PhysicsWorld::push_point(&mut self, p: glam::f32::vec2::Vec2, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, user_key: core::option::Option<nobonk::ColKey>) -> nobonk::FrameId
+pub fn nobonk::world::PhysicsWorld::query_aabb(&self, center: glam::f32::vec2::Vec2, half_extents: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::query_circle(&self, center: glam::f32::vec2::Vec2, radius: f32, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::query_point(&self, p: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::raycast(&self, origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, max_t: f32) -> core::option::Option<(nobonk::FrameId, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::sweep_by_key(&self, a: nobonk::ColKey, b: nobonk::ColKey) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::world::PhysicsWorld::sweep_pair(&self, a: nobonk::FrameId, b: nobonk::FrameId) -> core::option::Option<nobonk::SweepHit>
+impl core::marker::Freeze for nobonk::world::PhysicsWorld
+impl core::marker::Send for nobonk::world::PhysicsWorld
+impl core::marker::Sync for nobonk::world::PhysicsWorld
+impl core::marker::Unpin for nobonk::world::PhysicsWorld
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::world::PhysicsWorld
+impl core::panic::unwind_safe::UnwindSafe for nobonk::world::PhysicsWorld
+pub struct nobonk::SweepHit
+pub nobonk::SweepHit::contact: glam::f32::vec2::Vec2
+pub nobonk::SweepHit::normal: glam::f32::vec2::Vec2
+pub nobonk::SweepHit::toi: f32
+impl core::clone::Clone for nobonk::SweepHit
+pub fn nobonk::SweepHit::clone(&self) -> nobonk::SweepHit
+impl core::fmt::Debug for nobonk::SweepHit
+pub fn nobonk::SweepHit::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for nobonk::SweepHit
+impl core::marker::Freeze for nobonk::SweepHit
+impl core::marker::Send for nobonk::SweepHit
+impl core::marker::Sync for nobonk::SweepHit
+impl core::marker::Unpin for nobonk::SweepHit
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::SweepHit
+impl core::panic::unwind_safe::UnwindSafe for nobonk::SweepHit
+pub struct nobonk::WorldConfig
+pub nobonk::WorldConfig::cell_size: f32
+pub nobonk::WorldConfig::dt: f32
+pub nobonk::WorldConfig::enable_overlap_events: bool
+pub nobonk::WorldConfig::enable_sweep_events: bool
+pub nobonk::WorldConfig::enable_timing: bool
+pub nobonk::WorldConfig::max_events: usize
+pub nobonk::WorldConfig::tighten_swept_aabb: bool
+impl core::clone::Clone for nobonk::WorldConfig
+pub fn nobonk::WorldConfig::clone(&self) -> nobonk::WorldConfig
+impl core::fmt::Debug for nobonk::WorldConfig
+pub fn nobonk::WorldConfig::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Freeze for nobonk::WorldConfig
+impl core::marker::Send for nobonk::WorldConfig
+impl core::marker::Sync for nobonk::WorldConfig
+impl core::marker::Unpin for nobonk::WorldConfig
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::WorldConfig
+impl core::panic::unwind_safe::UnwindSafe for nobonk::WorldConfig
+pub struct nobonk::WorldStats
+pub nobonk::WorldStats::candidate_pairs: usize
+pub nobonk::WorldStats::cells: usize
+pub nobonk::WorldStats::entries: usize
+pub nobonk::WorldStats::unique_pairs: usize
+impl core::clone::Clone for nobonk::WorldStats
+pub fn nobonk::WorldStats::clone(&self) -> nobonk::WorldStats
+impl core::default::Default for nobonk::WorldStats
+pub fn nobonk::WorldStats::default() -> nobonk::WorldStats
+impl core::fmt::Debug for nobonk::WorldStats
+pub fn nobonk::WorldStats::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for nobonk::WorldStats
+impl core::marker::Freeze for nobonk::WorldStats
+impl core::marker::Send for nobonk::WorldStats
+impl core::marker::Sync for nobonk::WorldStats
+impl core::marker::Unpin for nobonk::WorldStats
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::WorldStats
+impl core::panic::unwind_safe::UnwindSafe for nobonk::WorldStats
+pub struct nobonk::WorldTiming
+pub nobonk::WorldTiming::end_frame_aabbs_ms: f64
+pub nobonk::WorldTiming::end_frame_grid_ms: f64
+pub nobonk::WorldTiming::end_frame_ms: f64
+pub nobonk::WorldTiming::events_emitted: usize
+pub nobonk::WorldTiming::generate_ms: f64
+pub nobonk::WorldTiming::generate_narrowphase_ms: f64
+pub nobonk::WorldTiming::generate_scan_ms: f64
+impl core::clone::Clone for nobonk::WorldTiming
+pub fn nobonk::WorldTiming::clone(&self) -> nobonk::WorldTiming
+impl core::default::Default for nobonk::WorldTiming
+pub fn nobonk::WorldTiming::default() -> nobonk::WorldTiming
+impl core::fmt::Debug for nobonk::WorldTiming
+pub fn nobonk::WorldTiming::fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result
+impl core::marker::Copy for nobonk::WorldTiming
+impl core::marker::Freeze for nobonk::WorldTiming
+impl core::marker::Send for nobonk::WorldTiming
+impl core::marker::Sync for nobonk::WorldTiming
+impl core::marker::Unpin for nobonk::WorldTiming
+impl core::panic::unwind_safe::RefUnwindSafe for nobonk::WorldTiming
+impl core::panic::unwind_safe::UnwindSafe for nobonk::WorldTiming
+pub trait nobonk::NarrowphaseApi
+pub fn nobonk::NarrowphaseApi::line_segment_aabb(a: glam::f32::vec2::Vec2, b: glam::f32::vec2::Vec2, aabb_min: glam::f32::vec2::Vec2, aabb_max: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::NarrowphaseApi::line_segment_circle(a: glam::f32::vec2::Vec2, b: glam::f32::vec2::Vec2, center: glam::f32::vec2::Vec2, r: f32) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::NarrowphaseApi::overlap_aabb_aabb(c0: glam::f32::vec2::Vec2, h0: glam::f32::vec2::Vec2, c1: glam::f32::vec2::Vec2, h1: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::Overlap>
+pub fn nobonk::NarrowphaseApi::overlap_circle_circle(c0: glam::f32::vec2::Vec2, r0: f32, c1: glam::f32::vec2::Vec2, r1: f32) -> core::option::Option<nobonk::Overlap>
+pub fn nobonk::NarrowphaseApi::overlap_point_aabb(p: glam::f32::vec2::Vec2, c: glam::f32::vec2::Vec2, h: glam::f32::vec2::Vec2) -> bool
+pub fn nobonk::NarrowphaseApi::overlap_point_circle(p: glam::f32::vec2::Vec2, c: glam::f32::vec2::Vec2, r: f32) -> bool
+pub fn nobonk::NarrowphaseApi::ray_aabb(origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, aabb_min: glam::f32::vec2::Vec2, aabb_max: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::NarrowphaseApi::ray_circle(origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, center: glam::f32::vec2::Vec2, r: f32) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::NarrowphaseApi::sweep_aabb_aabb(c0: glam::f32::vec2::Vec2, h0: glam::f32::vec2::Vec2, v0: glam::f32::vec2::Vec2, c1: glam::f32::vec2::Vec2, h1: glam::f32::vec2::Vec2, v1: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::NarrowphaseApi::sweep_circle_aabb(c: glam::f32::vec2::Vec2, r: f32, v: glam::f32::vec2::Vec2, box_c: glam::f32::vec2::Vec2, box_h: glam::f32::vec2::Vec2, box_v: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::NarrowphaseApi::sweep_circle_circle(c0: glam::f32::vec2::Vec2, r0: f32, v0: glam::f32::vec2::Vec2, c1: glam::f32::vec2::Vec2, r1: f32, v1: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
+impl nobonk::NarrowphaseApi for nobonk::narrowphase::Narrowphase
+pub fn nobonk::narrowphase::Narrowphase::line_segment_aabb(a: glam::f32::vec2::Vec2, b: glam::f32::vec2::Vec2, aabb_min: glam::f32::vec2::Vec2, aabb_max: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::narrowphase::Narrowphase::line_segment_circle(a: glam::f32::vec2::Vec2, b: glam::f32::vec2::Vec2, center: glam::f32::vec2::Vec2, r: f32) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::narrowphase::Narrowphase::overlap_aabb_aabb(c0: glam::f32::vec2::Vec2, h0: glam::f32::vec2::Vec2, c1: glam::f32::vec2::Vec2, h1: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::Overlap>
+pub fn nobonk::narrowphase::Narrowphase::overlap_circle_circle(c0: glam::f32::vec2::Vec2, r0: f32, c1: glam::f32::vec2::Vec2, r1: f32) -> core::option::Option<nobonk::Overlap>
+pub fn nobonk::narrowphase::Narrowphase::overlap_point_aabb(p: glam::f32::vec2::Vec2, c: glam::f32::vec2::Vec2, h: glam::f32::vec2::Vec2) -> bool
+pub fn nobonk::narrowphase::Narrowphase::overlap_point_circle(p: glam::f32::vec2::Vec2, c: glam::f32::vec2::Vec2, r: f32) -> bool
+pub fn nobonk::narrowphase::Narrowphase::ray_aabb(origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, aabb_min: glam::f32::vec2::Vec2, aabb_max: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::narrowphase::Narrowphase::ray_circle(origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, center: glam::f32::vec2::Vec2, r: f32) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::narrowphase::Narrowphase::sweep_aabb_aabb(c0: glam::f32::vec2::Vec2, h0: glam::f32::vec2::Vec2, v0: glam::f32::vec2::Vec2, c1: glam::f32::vec2::Vec2, h1: glam::f32::vec2::Vec2, v1: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::narrowphase::Narrowphase::sweep_circle_aabb(c: glam::f32::vec2::Vec2, r: f32, v: glam::f32::vec2::Vec2, box_c: glam::f32::vec2::Vec2, box_h: glam::f32::vec2::Vec2, box_v: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::narrowphase::Narrowphase::sweep_circle_circle(c0: glam::f32::vec2::Vec2, r0: f32, v0: glam::f32::vec2::Vec2, c1: glam::f32::vec2::Vec2, r1: f32, v1: glam::f32::vec2::Vec2) -> core::option::Option<nobonk::SweepHit>
+pub trait nobonk::PhysicsWorldApi
+pub fn nobonk::PhysicsWorldApi::begin_frame(&mut self)
+pub fn nobonk::PhysicsWorldApi::drain_events(&mut self) -> alloc::vec::Vec<nobonk::Event>
+pub fn nobonk::PhysicsWorldApi::end_frame(&mut self)
+pub fn nobonk::PhysicsWorldApi::generate_events(&mut self)
+pub fn nobonk::PhysicsWorldApi::new(cfg: nobonk::WorldConfig) -> Self where Self: core::marker::Sized
+pub fn nobonk::PhysicsWorldApi::overlap_by_key(&self, a: nobonk::ColKey, b: nobonk::ColKey) -> core::option::Option<nobonk::Overlap>
+pub fn nobonk::PhysicsWorldApi::overlap_pair(&self, a: nobonk::FrameId, b: nobonk::FrameId) -> core::option::Option<nobonk::Overlap>
+pub fn nobonk::PhysicsWorldApi::push(&mut self, desc: nobonk::ColliderDesc, motion: nobonk::Motion) -> nobonk::FrameId
+pub fn nobonk::PhysicsWorldApi::push_aabb(&mut self, center: glam::f32::vec2::Vec2, half_extents: glam::f32::vec2::Vec2, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, user_key: core::option::Option<nobonk::ColKey>) -> nobonk::FrameId
+pub fn nobonk::PhysicsWorldApi::push_circle(&mut self, center: glam::f32::vec2::Vec2, radius: f32, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, user_key: core::option::Option<nobonk::ColKey>) -> nobonk::FrameId
+pub fn nobonk::PhysicsWorldApi::push_point(&mut self, p: glam::f32::vec2::Vec2, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, user_key: core::option::Option<nobonk::ColKey>) -> nobonk::FrameId
+pub fn nobonk::PhysicsWorldApi::query_aabb(&self, center: glam::f32::vec2::Vec2, half_extents: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::PhysicsWorldApi::query_circle(&self, center: glam::f32::vec2::Vec2, radius: f32, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::PhysicsWorldApi::query_point(&self, p: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::PhysicsWorldApi::raycast(&self, origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, max_t: f32) -> core::option::Option<(nobonk::FrameId, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::PhysicsWorldApi::sweep_by_key(&self, a: nobonk::ColKey, b: nobonk::ColKey) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::PhysicsWorldApi::sweep_pair(&self, a: nobonk::FrameId, b: nobonk::FrameId) -> core::option::Option<nobonk::SweepHit>
+impl nobonk::PhysicsWorldApi for nobonk::world::PhysicsWorld
+pub fn nobonk::world::PhysicsWorld::begin_frame(&mut self)
+pub fn nobonk::world::PhysicsWorld::drain_events(&mut self) -> alloc::vec::Vec<nobonk::Event>
+pub fn nobonk::world::PhysicsWorld::end_frame(&mut self)
+pub fn nobonk::world::PhysicsWorld::generate_events(&mut self)
+pub fn nobonk::world::PhysicsWorld::new(cfg: nobonk::WorldConfig) -> Self
+pub fn nobonk::world::PhysicsWorld::overlap_by_key(&self, a: nobonk::ColKey, b: nobonk::ColKey) -> core::option::Option<nobonk::Overlap>
+pub fn nobonk::world::PhysicsWorld::overlap_pair(&self, a: nobonk::FrameId, b: nobonk::FrameId) -> core::option::Option<nobonk::Overlap>
+pub fn nobonk::world::PhysicsWorld::push(&mut self, desc: nobonk::ColliderDesc, motion: nobonk::Motion) -> nobonk::FrameId
+pub fn nobonk::world::PhysicsWorld::push_aabb(&mut self, center: glam::f32::vec2::Vec2, half_extents: glam::f32::vec2::Vec2, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, user_key: core::option::Option<nobonk::ColKey>) -> nobonk::FrameId
+pub fn nobonk::world::PhysicsWorld::push_circle(&mut self, center: glam::f32::vec2::Vec2, radius: f32, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, user_key: core::option::Option<nobonk::ColKey>) -> nobonk::FrameId
+pub fn nobonk::world::PhysicsWorld::push_point(&mut self, p: glam::f32::vec2::Vec2, vel: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, user_key: core::option::Option<nobonk::ColKey>) -> nobonk::FrameId
+pub fn nobonk::world::PhysicsWorld::query_aabb(&self, center: glam::f32::vec2::Vec2, half_extents: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::query_circle(&self, center: glam::f32::vec2::Vec2, radius: f32, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::query_point(&self, p: glam::f32::vec2::Vec2, mask: nobonk::LayerMask) -> alloc::vec::Vec<(nobonk::FrameId, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::raycast(&self, origin: glam::f32::vec2::Vec2, dir: glam::f32::vec2::Vec2, mask: nobonk::LayerMask, max_t: f32) -> core::option::Option<(nobonk::FrameId, nobonk::SweepHit, core::option::Option<nobonk::ColKey>)>
+pub fn nobonk::world::PhysicsWorld::sweep_by_key(&self, a: nobonk::ColKey, b: nobonk::ColKey) -> core::option::Option<nobonk::SweepHit>
+pub fn nobonk::world::PhysicsWorld::sweep_pair(&self, a: nobonk::FrameId, b: nobonk::FrameId) -> core::option::Option<nobonk::SweepHit>
+pub type nobonk::ColKey = u64
