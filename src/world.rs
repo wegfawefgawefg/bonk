@@ -318,11 +318,11 @@ impl PhysicsWorldApi for PhysicsWorld {
                 }
                 if !emitted && self.cfg.enable_overlap_events {
                     // Check start embedded
-                    for m in &self.tilemaps {
+                    for (mi, m) in self.tilemaps.iter().enumerate() {
                         if !self.allows_pair(mask_a, m.mask) {
                             continue;
                         }
-                        if let Some(tref) = self.any_tile_overlap_at(m, e.desc.center, he) {
+                        if let Some(tref) = self.any_tile_overlap_at(mi, m, e.desc.center, he) {
                             // Build overlap with pushout hint
                             let cell = m.cell.max(1e-5);
                             let tile_min = m.origin
@@ -705,12 +705,9 @@ impl PhysicsWorldApi for PhysicsWorld {
                         continue;
                     }
                     let tile_min = m.origin + Vec2::new(ix as f32 * cell, iy as f32 * cell);
-                    let (_n, depth, _contact) =
-                        crate::narrowphase::Narrowphase::circle_tile_pushout(
-                            center, radius, tile_min, cell,
-                        );
-                    if depth >= 0.0 {
-                        // include touching
+                    let tile_c = tile_min + Vec2::splat(cell * 0.5);
+                    let tile_h = Vec2::splat(cell * 0.5);
+                    if Self::overlap_circle_aabb_bool(center, radius, tile_c, tile_h) {
                         out.push((
                             BodyRef::Tile(TileRef {
                                 map: TileMapRef(mi as u32),
@@ -1268,7 +1265,7 @@ impl PhysicsWorld {
         Some((uy * m.width + ux) as usize)
     }
 
-    fn any_tile_overlap_at(&self, m: &TileMap, center: Vec2, he: Vec2) -> Option<TileRef> {
+    fn any_tile_overlap_at(&self, mi: usize, m: &TileMap, center: Vec2, he: Vec2) -> Option<TileRef> {
         let cell = m.cell.max(1e-5);
         let min = center - he - m.origin;
         let max = center + he - m.origin;
@@ -1291,7 +1288,7 @@ impl PhysicsWorld {
                     .is_some()
                     {
                         return Some(TileRef {
-                            map: TileMapRef(0),
+                            map: TileMapRef(mi as u32),
                             cell_xy: glam::UVec2::new(ix as u32, iy as u32),
                         });
                     }
@@ -1326,7 +1323,7 @@ impl PhysicsWorld {
             for i in 1..=steps {
                 let t = (i as f32 / steps_f).min(1.0);
                 let p = p0 + d * t;
-                if let Some(tref) = self.any_tile_overlap_at(m, p, he) {
+                if let Some(tref) = self.any_tile_overlap_at(mi, m, p, he) {
                     tref_hit = Some(tref);
                     // binary search refine
                     let mut lo = t_prev;
@@ -1334,7 +1331,7 @@ impl PhysicsWorld {
                     for _ in 0..14 {
                         let mid = 0.5 * (lo + hi);
                         let q = p0 + d * mid;
-                        if self.any_tile_overlap_at(m, q, he).is_some() {
+                        if self.any_tile_overlap_at(mi, m, q, he).is_some() {
                             hi = mid;
                         } else {
                             lo = mid;
@@ -1360,14 +1357,7 @@ impl PhysicsWorld {
                         hint: ResolutionHint::default(),
                     };
                     hit.hint.safe_pos = Some(p0 + d * (toi - eps));
-                    best = Some((
-                        TileRef {
-                            map: TileMapRef(mi as u32),
-                            cell_xy: tr.cell_xy,
-                        },
-                        hit,
-                        m.user_key,
-                    ));
+                    best = Some((tr, hit, m.user_key));
                     break;
                 } else {
                     t_prev = t;
