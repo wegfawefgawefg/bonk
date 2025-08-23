@@ -33,3 +33,5 @@ openai.key
 # already existing elements were commented out
 
 #/target
+
+concat.txt

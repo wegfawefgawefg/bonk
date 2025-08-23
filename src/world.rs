@@ -1394,11 +1394,13 @@ impl PhysicsWorld {
         }
         let mut best: Option<(TileRef, SweepHit, Option<ColKey>)> = None;
         let eps = self.cfg.tile_eps.max(1e-6);
+
         for (mi, m) in self.tilemaps.iter().enumerate() {
             let cell = m.cell.max(1e-5);
             let local = origin - m.origin;
             let mut cx = (local.x / cell).floor() as i32;
             let mut cy = (local.y / cell).floor() as i32;
+
             let step_x = if dir.x > 0.0 {
                 1
             } else if dir.x < 0.0 {
@@ -1413,25 +1415,29 @@ impl PhysicsWorld {
             } else {
                 0
             };
-            let next_boundary = |c: i32, step: i32| -> f32 {
+
+            let next_boundary = |c: i32, step: i32| {
                 if step > 0 {
                     (c as f32 + 1.0) * cell
                 } else {
                     c as f32 * cell
                 }
             };
+
             let mut t_max_x = if step_x != 0 {
                 let nb = m.origin.x + next_boundary(cx, step_x);
                 (nb - origin.x) / dir.x
             } else {
                 f32::INFINITY
             };
+
             let mut t_max_y = if step_y != 0 {
                 let nb = m.origin.y + next_boundary(cy, step_y);
                 (nb - origin.y) / dir.y
             } else {
                 f32::INFINITY
             };
+
             let t_delta_x = if step_x != 0 {
                 cell / dir.x.abs()
             } else {
@@ -1442,53 +1448,57 @@ impl PhysicsWorld {
             } else {
                 f32::INFINITY
             };
+
             let mut t_curr = 0.0f32;
+            let mut last_axis_x: Option<bool> = None; // None => starting cell
+
             for _ in 0..20_000 {
                 if t_curr > max_t {
                     break;
                 }
+
                 if cx >= 0 && cy >= 0 && (cx as u32) < m.width && (cy as u32) < m.height {
                     let idx = cy as u32 * m.width + cx as u32;
                     if m.solids[idx as usize] != 0 && self.allows_pair(mask, m.mask) {
-                        let use_x = t_max_x < t_max_y;
-                        let toi = if use_x { t_max_x } else { t_max_y };
-                        if toi >= 0.0 && toi <= max_t {
-                            let contact = origin + dir * toi;
-                            let normal = if use_x {
-                                Vec2::new(-(step_x as f32), 0.0)
-                            } else {
-                                Vec2::new(0.0, -(step_y as f32))
-                            };
-                            let mut hit = SweepHit {
-                                toi,
-                                normal,
-                                contact,
-                                hint: ResolutionHint::default(),
-                            };
-                            hit.hint.safe_pos = Some(origin + dir * (toi - eps));
-                            let tr = TileRef {
-                                map: TileMapRef(mi as u32),
-                                cell_xy: glam::UVec2::new(cx as u32, cy as u32),
-                            };
-                            let key = m.user_key;
-                            match &best {
-                                Some((_, bh, _)) if hit.toi >= bh.toi => {}
-                                _ => best = Some((tr, hit, key)),
-                            }
+                        // hit the NEAR face: we entered this cell at t_curr
+                        let toi = t_curr.max(0.0);
+                        let normal = match last_axis_x {
+                            Some(true) => Vec2::new(-(step_x as f32), 0.0),
+                            Some(false) => Vec2::new(0.0, -(step_y as f32)),
+                            None => Vec2::ZERO, // started inside a solid tile
+                        };
+                        let mut hit = SweepHit {
+                            toi,
+                            normal,
+                            contact: origin + dir * toi,
+                            hint: ResolutionHint::default(),
+                        };
+                        hit.hint.safe_pos = Some(origin + dir * (toi - eps));
+                        let tr = TileRef {
+                            map: TileMapRef(mi as u32),
+                            cell_xy: glam::UVec2::new(cx as u32, cy as u32),
+                        };
+                        let key = m.user_key;
+
+                        match &best {
+                            Some((_, bh, _)) if hit.toi >= bh.toi => {}
+                            _ => best = Some((tr, hit, key)),
                         }
+                        break;
                     }
                 }
+
+                // step to next cell; update entry time & axis
                 if t_max_x < t_max_y {
                     cx += step_x;
                     t_curr = t_max_x;
                     t_max_x += t_delta_x;
+                    last_axis_x = Some(true);
                 } else {
                     cy += step_y;
                     t_curr = t_max_y;
                     t_max_y += t_delta_y;
-                }
-                if t_curr > max_t {
-                    break;
+                    last_axis_x = Some(false);
                 }
             }
         }
@@ -1972,18 +1982,44 @@ mod tests {
     fn test_circle_sweep_diagonal_vel_and_radii() {
         let mut w = PhysicsWorld::new(cfg());
         // 32x32 map with vertical wall at x=16
-        let width = 32u32; let height = 32u32; let mut solids = vec![0u8; (width*height) as usize];
-        for y in 0..height { solids[(y*width + 16) as usize] = 1; }
-        w.attach_tilemap(TileMapDesc { origin: Vec2::new(0.0,0.0), cell: 1.0, width, height, solids: &solids, mask: LayerMask::simple(2,1), user_key: None });
-        let mask = LayerMask::simple(1,2);
+        let width = 32u32;
+        let height = 32u32;
+        let mut solids = vec![0u8; (width * height) as usize];
+        for y in 0..height {
+            solids[(y * width + 16) as usize] = 1;
+        }
+        w.attach_tilemap(TileMapDesc {
+            origin: Vec2::new(0.0, 0.0),
+            cell: 1.0,
+            width,
+            height,
+            solids: &solids,
+            mask: LayerMask::simple(2, 1),
+            user_key: None,
+        });
+        let mask = LayerMask::simple(1, 2);
         let center = Vec2::new(12.5, 10.5);
         let radii = [0.1f32, 0.25, 0.5, 0.9];
-        let vels = [Vec2::new(6.0, 3.0), Vec2::new(12.0, -6.0), Vec2::new(8.0, 4.0)];
+        let vels = [
+            Vec2::new(6.0, 3.0),
+            Vec2::new(12.0, -6.0),
+            Vec2::new(8.0, 4.0),
+        ];
         for &r in &radii {
             for &v in &vels {
-                let (_tr1, hit_c, _k1) = w.sweep_circle_tiles(center, r, v, mask).expect("circle sweep should hit");
-                let (_tr2, hit_a, _k2) = w.sweep_aabb_tiles(center, Vec2::splat(r), v, mask).expect("aabb(r) sweep should hit");
-                assert!((hit_c.toi - hit_a.toi).abs() < 5e-3, "toi mismatch r={} v=({},{})", r, v.x, v.y);
+                let (_tr1, hit_c, _k1) = w
+                    .sweep_circle_tiles(center, r, v, mask)
+                    .expect("circle sweep should hit");
+                let (_tr2, hit_a, _k2) = w
+                    .sweep_aabb_tiles(center, Vec2::splat(r), v, mask)
+                    .expect("aabb(r) sweep should hit");
+                assert!(
+                    (hit_c.toi - hit_a.toi).abs() < 5e-3,
+                    "toi mismatch r={} v=({},{})",
+                    r,
+                    v.x,
+                    v.y
+                );
                 let dn = (hit_c.normal - hit_a.normal).length();
                 assert!(dn < 1e-2, "normal mismatch r={} v=({},{})", r, v.x, v.y);
                 assert!(hit_c.hint.safe_pos.is_some());
